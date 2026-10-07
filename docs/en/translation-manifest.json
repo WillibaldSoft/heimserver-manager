@@ -11,8 +11,8 @@
   },
   "README.md": {
     "english": "docs/en/README.md",
-    "english_sha256": "b1d61eb62a095d0d711d52beb082020fcf67512fdd66eaf880a2c58f1f07786d",
-    "source_sha256": "9a1f50711f2877645a008ddf06d9f091bfcc7e3f3beb2b16c9752ba5c9dca8fa"
+    "english_sha256": "e0bb7eeb83b592048fe2faf9fb2873702a30cfe012ccd93fa91bc682532a0f38",
+    "source_sha256": "447db7d120e0bf085d71fedd9b9e2ab74029a8edcbc5bb12537cc0099e866942"
   },
   "THIRD_PARTY_NOTICES.md": {
     "english": "docs/en/THIRD_PARTY_NOTICES.md",

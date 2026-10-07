@@ -1,4 +1,10 @@
-# Server Manager
+# Heimserver Manager / Home Server Manager
+
+**BETA – Entwicklungsstand zur Erprobung.** Funktionen können Fehler enthalten oder sich ändern. Vor Installation und Aktualisierung Daten sichern. Debian 13 ist die primäre Zielplattform; Mint 22.x und der Windows-Client sind zusätzlich experimentell.
+
+[English documentation](docs/en/README.md) · [Downloads / Releases](https://github.com/WillibaldSoft/heimserver-manager/releases)
+
+**BETA – development version for testing.** Features may contain errors or change. Back up your data before installation or updates. Debian 13 is the primary target; Mint 22.x and the Windows client are additionally experimental.
 
 Weboberfläche zur Verwaltung von Anwendungen, Diensten, Speicher, Freigaben und weiteren Serverfunktionen.
 

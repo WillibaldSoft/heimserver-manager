@@ -1,4 +1,6 @@
-# Server Manager
+# Heimserver Manager / Home Server Manager
+
+**BETA – development version for testing.** Features may contain errors or change. Back up your data before installation or updates. Debian 13 is the primary target; Mint 22.x and the Windows client are additionally experimental.
 
 Web interface for managing applications, services, storage, shares and other server functions.
 
