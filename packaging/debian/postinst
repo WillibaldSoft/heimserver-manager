@@ -1,0 +1,46 @@
+#!/bin/sh
+set -eu
+. /usr/share/debconf/confmodule
+case "$1" in
+ configure|abort-upgrade|abort-remove|abort-deconfigure)
+    install -d -m 0700 /etc/server-manager /var/lib/server-manager /var/cache/server-manager
+    # Reproducible packages share timestamps; equal-sized Python files can
+    # otherwise reuse bytecode from an older release (including version.py).
+    if [ -d /var/cache/server-manager/python ]; then
+        find /var/cache/server-manager/python -type f -name '*.pyc' -delete
+    fi
+    if [ -d /opt/server-manager ]; then
+        find /opt/server-manager -type f -path '*/__pycache__/*.pyc' -delete
+    fi
+    db_get server-manager/port
+    selected_port=$RET
+    if ! /usr/bin/python3 /opt/server-manager/tools/server_port.py --apply "$selected_port"; then
+        echo 'Portwahl korrigieren: sudo dpkg-reconfigure server-manager (oder debconf-set-selections und sudo dpkg --configure server-manager).' >&2
+        exit 1
+    fi
+    db_get server-manager/https-port
+    https_port=${RET:-443}
+    db_get server-manager/https-ip-port
+    https_ip_port=${RET:-8443}
+    db_stop
+    # Generate host-specific secrets only on the target, never during the build.
+    /usr/bin/python3 /opt/server-manager/tools/package_first_start.py
+    deb-systemd-helper unmask server-manager.service >/dev/null || true
+    if deb-systemd-helper --quiet was-enabled server-manager.service; then
+        deb-systemd-helper enable server-manager.service >/dev/null || true
+    else
+        deb-systemd-helper update-state server-manager.service >/dev/null || true
+    fi
+    if [ -d /run/systemd/system ]; then
+        systemctl daemon-reload
+        deb-systemd-invoke restart server-manager.service
+    fi
+    # HTTPS is mandatory. Existing names/certificates are preserved; failure
+    # is explicit and never enables an external plaintext fallback.
+    if ! SERVER_MANAGER_PORT="$selected_port" /usr/bin/python3 /opt/server-manager/tools/manager_https.py --bootstrap --https-port "$https_port" --ip-port "$https_ip_port"; then
+        echo 'HTTPS-Einrichtung fehlgeschlagen. Apache/Ports über das Terminal prüfen und sudo dpkg --configure server-manager wiederholen. Kein externer HTTP-Ersatzzugang.' >&2
+        exit 1
+    fi
+    echo 'Neue Installation: Benutzer ADMIN / Passwort ADMIN. Zugang unter Einstellungen ändern.'
+    ;;
+esac

@@ -1,0 +1,99 @@
+SYSTEM SICHERN & WIEDERHERSTELLEN – LINUX-CLIENT 0.3.3
+
+Im Client unter Eigene Client-Sicherungen den gleichnamigen Button öffnen.
+Der geführte Ablauf läuft im Clientfenster und benötigt lokale Administratorrechte.
+Ordner über die Dateiauswahl wählen; eingehängte USB-/NFS-Ablagen werden als
+Abkürzungen angeboten. Weitere Skriptabfragen erscheinen als Dialoge, das Protokoll
+bleibt im Fenster sichtbar. Das portable Live-USB-Paket bleibt terminalbasiert.
+Normale Datei-/Home-Sicherung und einzelne Dateirücksicherung bleiben im Client.
+
+SICHERUNGSZIEL
+- Eingehängte USB-Platte mit Linux-Dateisystem, beispielsweise ext4.
+- Alternativ eingehängte NFS-Ablage auf dem Server. Eigentümer und ACLs müssen
+  tatsächlich erhalten bleiben; dies wird mit einer eigenen Testdatei geprüft.
+  NFS muss vorher eingerichtet sein. Keine pauschale root-Freigabe für das LAN.
+- Der HTTPS-Client-Token richtet keine NFS-Freigabe ein. Für die Dauer des NFS-
+  Ablaufs den Schlafzeitplan am Server pausieren. Der Dateibackup-HTTPS-Weg bleibt
+  unabhängig davon verfügbar und benötigt keine NFS-Freigabe.
+- FAT/exFAT/NTFS/SMB sind keine Ziele für dieses lose Systemkomponentenformat.
+  Die normale ZIP-Dateisicherung auf USB kann weiterhin andere Dateisysteme nutzen.
+- Jeder neue Lauf erhält einen eigenen System-Zeitstempelordner. Frühere Stände
+  werden nicht überschrieben. Große Arbeitsdaten bleiben auf dem gewählten Ziel.
+
+SICHERN
+Den normalen Client-Benutzer wählen. Der Ablauf übernimmt dessen Home,
+Programmlisten und Paketquellen, Desktop-Einstellungen sowie die von der Vorlage
+unterstützten Systemkonfigurationen. Normal/umfangreich oder schlank auswählen.
+Programme vorher schließen. Laufende Datenbanken und virtuelle Maschinen werden
+nicht konsistent als Gesamtsystem erfasst. Das Ergebnis ist kein Festplattenabbild.
+Berichte enthalten fehlende oder nicht verfügbare Komponenten.
+
+WIEDERHERSTELLEN
+1. Vom Linux-Live-USB starten. Eine vorhandene Linux-Grundinstallation als Ziel
+   separat einhängen, z. B. unter /mnt/linux; den Zielbenutzer vorher anlegen.
+2. USB-/NFS-Sicherungsablage einhängen. Das Skript partitioniert und formatiert nicht.
+3. Client installieren oder das portable Paket entpacken und starten:
+      sudo bash system-recovery.sh
+   Benötigt: python3, rsync, acl, gnupg und die üblichen Linux-Mountwerkzeuge.
+   Vorabprüfung ohne Änderungen: bash system-recovery.sh --check
+4. Wiederherstellung wählen; Sicherungsordner mit files/ und apps/ angeben.
+5. Installiertes Zielsystem und dessen vorhandenen Benutzer wählen.
+6. Home, Programme & Desktop oder vollständige unterstützte Systemwiederherstellung
+   wählen, Zielangaben prüfen und WIEDERHERSTELLEN bestätigen.
+
+GRENZEN
+- Nur das Live-Ziel wird als Systemrestore zugelassen. Backups mit der Markierung
+  .unvollstaendig müssen zunächst geprüft werden.
+- Paketverfügbarkeit, Distribution, Version und Architektur beeinflussen das
+  Ergebnis. Abweichende Plattformen werden als Migration behandelt.
+- Benutzerprogramme, Flatpak-/Snap-Installation und Benutzer-/Gruppenabgleich können
+  im Live-System ausgelassen werden und benötigen nach dem Start manuelle Nacharbeit.
+  Berichte sind maßgeblich; Ende des Ablaufs bedeutet keine garantierte Vollständigkeit.
+- Kein automatisches Einrichten von Partitionen, Verschlüsselung oder Bootloader.
+- Dateien in einen neuen Ordner zurückholen: normale Dateirücksicherung verwenden.
+  Das Systemkomponentenformat ist unabhängig von den ZIP-Dateisicherungen.
+- Die Manager-Administratoranmeldung für Server-Backups wird nicht umgangen.
+  Dieser Assistent arbeitet auf dem lokalen Linux-Client, nicht auf dem Manager.
+- Schutzprüfungen und Paketbau getestet. Eine vollständige Rücksicherung auf echter
+  Zielhardware wurde für diese Client-Integration noch nicht durchgeführt.
+
+DIREKT AUF DEN SERVER (HTTPS, CLIENT 0.3.2)
+Im Systemassistenten „Diesen Linux-Client direkt auf den Server sichern (HTTPS)“
+wählen. Verwendet das eigene JSON-Client-Profil und ein gültiges HTTPS-Zertifikat.
+Keine SMB-/NFS-Freigabe, keine komplette lokale Zwischenkopie. Lokale
+Administratorfreigabe nur zum Lesen der Systemdaten; Client-Token bleibt beim
+angemeldeten Desktopbenutzer. Das Sicherungslimit des Managers gilt weiterhin.
+Gesichert werden Linux-Systemdateien, installierte Programme, Konfiguration und
+Benutzer mit UID/GID, ACLs, erweiterten Attributen und Links als system.tar in ZIP.
+Root-Dateisystem und übliche separate Systempartitionen werden berücksichtigt;
+andere Mounts, virtuelle Dateisysteme und temporäre Verzeichnisse bleiben aus.
+Vorher Anwendungen und Datenbanken beenden: kein konsistenter Snapshot laufender
+Dienste, kein Festplattenabbild, keine Partitionstabelle und kein Bootloader.
+Dieses Format ist unabhängig vom Komponenten-Assistenten. Normale Dateirücksicherung
+stellt system.tar und ANLEITUNG.txt in einem neuen Ordner bereit; dafür wird
+zusätzlicher Speicher benötigt. Dateien aus dem TAR gezielt entnehmen. Vollständiger
+Restore ausschließlich im Live-System mit manueller Prüfung von Partitionen,
+Dateisystemzuordnung und Bootloader. Für dieses TAR-Format ab Client 0.3.3 den eigenen HTTPS-Restore verwenden;
+nicht im bisherigen Komponenten-Assistenten auswählen.
+Bei Proxy-Zeitüberschreitung nach Upload prüft der Client den fertigen Stand anhand
+Kennung, Größe und Prüfsumme nach, bevor er Erfolg meldet.
+
+HTTPS-SYSTEMARCHIV WIEDERHERSTELLEN (AB CLIENT 0.3.3)
+1. Linux-Live-System starten, Client installieren und eigenes Client-Profil laden.
+   Privates HTTPS mit geprüftem Stammzertifikat einrichten, falls erforderlich.
+2. Vorhandene Linux-Grundinstallation als Ziel separat einhängen. Unterstützt wird
+   ein gemeinsames Root-/Home-Dateisystem ohne darunter eingehängte Partitionen.
+   Separate Home-/Boot-/EFI-Partitionen müssen gesondert behandelt werden.
+3. Externe Linux-Arbeitsplatte einhängen, mindestens zweimal ZIP-Größe plus Reserve
+   freihalten. Arbeitsablage darf weder Live-System noch Restore-Ziel sein.
+4. „Systemarchiv vom Server wiederherstellen (Live-USB)“ öffnen. Serverstand,
+   Arbeitsablage und Ziel wählen; Download und Prüfung starten.
+5. Nach Administratorfreigabe werden geschützte Prüfkopie, Prüfsumme, ZIP-Integrität,
+   Archivpfade und freier Zielplatz geprüft. Ziel und Umfang kontrollieren und
+   WIEDERHERSTELLEN eingeben. Abbruch davor verändert keine Zieldateien.
+6. Dateien, Eigentümer, Rechte, ACLs und erweiterte Attribute zurückspielen.
+   Ziel-fstab/crypttab bleiben erhalten; zusätzliche Zieldateien werden nicht gelöscht.
+7. Ergebnis prüfen. Partitionen, Bootloader und Hardwareanpassungen vor dem Booten
+   separat prüfen/einrichten. Heruntergeladenes ZIP bleibt auf der Arbeitsplatte.
+Bei Fehlern nach Start kann ein Teilstand im Ziel verbleiben. Eine vollständige
+Rücksicherung auf echter Zielhardware wurde noch nicht validiert.

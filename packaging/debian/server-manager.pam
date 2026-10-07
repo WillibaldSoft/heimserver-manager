@@ -1,0 +1,4 @@
+# Heimserver Manager: local account authentication
+auth requisite pam_localuser.so
+@include common-auth
+@include common-account

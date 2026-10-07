@@ -1,0 +1,59 @@
+HTTPS SYSTEM BACKUP AND RESTORE – LINUX CLIENT 0.4.0
+
+OPERATION
+1. Enable your own client backups with the Manager account (User role) or use your previous personal agent profile. Server backups remain reserved for administrators. Local system files require pkexec approval.
+2. Log in to the Client → Your Backups → Backup & Restore System.
+3. Use / as the source, or select an installed Linux from a Live-USB under a separate mount point. Enter additional data drives as mount points in the selected source system, separated by semicolons.
+4. Include network profiles with credentials only when explicitly needed.
+5. Start HTTPS backup. Do not create any local intermediate copy of the system archive.
+
+INCREMENTAL
+The first snapshot transfers all new blocks. Subsequent snapshots send only unknown 4-MiB blocks to the same account/profile repository. All sources are read again on every run; file changes/shifted block boundaries may cause additional transfer; no guarantee of a precise file-level delta.
+Each snapshot has a complete manifest and can be selected independently.
+Individual blocks can be used by multiple snapshots: never delete manually. Aborting does not release a finished snapshot. Discard incomplete transfers in the client; only unreferenced blocks are removed during this process.
+The manager displays logical total size and actually occupied storage.
+
+CONTAINS AS WITH THE SYSTEM COMPONENTS OF THE ORIGINAL SCRIPT
+- All user homes including hidden desktop settings.
+- Native programs with package database, versions, repositories, and keys.
+- System/user Flatpak, Snap, pip/pipx/npm and local programs/AppImages,
+  insofar as their files reside on the backed-up filesystems.
+- Users/groups, UID/GID, ACLs, extended attributes, symlinks and hardlinks.
+- System services including activation links, cron, local programs and configurations.
+- Printer/Udev/SMB/NFS configuration; selected additional local data drives.
+- Optionally network profiles; complete system archives already contain sensitive
+  data such as user accounts and private system keys anyway.
+- System inventory with package lists, user applications, mounts, hardware,
+  partition references and reported detection errors. Uninstalled
+  inventory tools are documented. No programs of the mounted system are executed offline;
+  original files remain included in the archive.
+
+RESTORE
+- Selectable: entire system, home, software, desktop, identities, services,
+  cron, system configuration, network or individual file/folder.
+- Individual files: into a NEW folder within the running system without root rights.
+  Links and special files are omitted during this process; no foreign ownership rights.
+- System/Components: exclusively live system, prepared and mounted
+  Linux target; same distribution, version and architecture. For other
+  platforms only transfer files; do not perform unverified binary/package migration.
+- Mount separate target partitions before starting; their types and identities
+  are checked. fstab/crypttab of the target system remain intact.
+- External workspace required for download and protected test copy:
+  conservatively twice logical archive size plus reserve. Checksums and
+  archive paths are verified before destination changes; confirmation required.
+- Additional existing target files are NOT deleted. No mirror restore
+  with automatic deletion. Restore into a prepared, clean target system.
+
+LIMITATIONS – NO SECTOR-BY-SECTOR 1:1 MIRROR
+Partitioning, bootloaders and hardware/UUID adjustments are not blindly automated.
+Backed-up partition/firmware information serves as reference. Bootability after restore must be checked separately/bootloader renewed.
+Stop or offline-backup running databases, containers and VMs beforehand.
+The file copy does not guarantee application consistency of running services.
+Network shares, virtual filesystems and unselected mounts remain excluded.
+Archive encryption at rest is not integrated; HTTPS protects the transfer,
+the server protects repositories with file permissions.
+The old USB/NFS component assistant remains a separate process. Its
+platform-wide package migration is not an automatic HTTPS system restore.
+
+LOGIN
+The set session duration applies also during a backup. Re-login before long runs and allow sufficient time. A run does not release an incomplete snapshot; already transferred blocks remain preserved.

@@ -1,0 +1,38 @@
+PLATFORM PACKAGES
+Debian 13: standard status. Linux Mint 22.x: still experimental.
+Check the status of each package in PLATTFORM.txt.
+Preliminary step: sh install_deb.sh --check DATEI.deb
+Debian packages are for Debian 13 only; Mint packages are for Mint 22.x with Ubuntu Noble base only.
+Initial setup and additional mode on Mint are not available.
+Further restrictions: docs/PLATTFORMEN.md in the source archive.
+
+HOME SERVER MANAGER – INSTALLATION AND ADD-ONS
+
+Target system: Debian 13 with systemd. Package architecture: all; individual applications and optional hardware require matching architecture and drivers.
+
+1. Extract the complete ZIP or download DEB and install_deb.sh together.
+2. Verify individual DEBs: sha256sum -c Heimserver_Manager_*.deb.sha256
+   Verify all separately downloaded assets: sha256sum -c SHA256SUMS
+3. Run as a normal user: sh ./install_deb.sh
+
+Mode 1: Install or update the manager.
+Mode 2: Complete Debian 13 setup after an offline installation, then install the manager.
+Mode 3: Add-ons only, without manager installation.
+
+Optional: administration tools, firmware packages, CPU microcode, NetworkManager,
+system maintenance as well as SSH and XRDP/XFCE. Each selection is explained and confirmed.
+These programs are NOT included in the DEB; APT downloads them if needed.
+The package is not a complete offline installer.
+
+Updates may restart the manager service. Complete running jobs beforehand
+and back up data. Existing manual installations will not be accepted by the DEB without verification: for this, a separate migration must first take place.
+A fresh installation starts with ADMIN/ADMIN according to package configuration;
+immediately change access under Settings and do not expose it publicly.
+The installer displays the HTTPS port and access via computer name as well as server IP. HTTP is only reachable internally on 127.0.0.1. Import private root certificate on clients
+and verify the displayed fingerprint. Set up name resolution in router
+or hosts; additional IP access does not require a DNS name.
+Migrate existing HTTP agents to HTTPS, import new profile and set up certificate trust. If HTTPS setup fails via server terminal check Apache/ports and repeat sudo dpkg --configure server-manager. No external HTTP fallback access. No automatic reboot.
+
+The source archive contains an explicit file selection without server state or
+Git history. SHA256SUMS protects against corrupted/deviating downloads,
+but is not a cryptographic publisher signature.

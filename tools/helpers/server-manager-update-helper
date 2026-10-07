@@ -1,0 +1,74 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+import os, sys, json, re, subprocess
+from pathlib import Path
+
+TOOLS = {
+    "nextcloud": {"label": "Nextcloud", "script": "/usr/local/sbin/nextcloud-web-update.sh", "actions": ["auto", "version"]},
+    "immich": {"label": "Immich", "script": "/usr/local/sbin/immich-manager.sh", "actions": ["check", "info", "backup", "update"]},
+    "stirling-pdf": {"label": "Stirling PDF", "script": "/usr/local/sbin/stirling-pdf-manager.sh", "actions": ["check", "info", "update"]},
+}
+
+def run(cmd, timeout=7200):
+    try:
+        p = subprocess.run(cmd, text=True, capture_output=True, timeout=timeout)
+        return p.returncode, (p.stdout or "") + (p.stderr or "")
+    except Exception as e:
+        return 999, str(e)
+
+def status():
+    rows = []
+    for key, cfg in TOOLS.items():
+        p = Path(cfg["script"])
+        rows.append({
+            "component": key,
+            "label": cfg["label"],
+            "script": str(p),
+            "exists": p.exists(),
+            "executable": os.access(p, os.X_OK) if p.exists() else False,
+            "actions": cfg["actions"],
+        })
+    print(json.dumps({"ok": True, "tools": rows}, ensure_ascii=False))
+
+def execute(component, action, version=""):
+    if component not in TOOLS:
+        print(json.dumps({"ok": False, "error": "Komponente nicht erlaubt"}, ensure_ascii=False)); sys.exit(1)
+    cfg = TOOLS[component]
+    script = Path(cfg["script"])
+    if not script.exists():
+        print(json.dumps({"ok": False, "error": "Skript nicht gefunden: " + str(script)}, ensure_ascii=False)); sys.exit(1)
+
+    if component == "nextcloud":
+        if action == "auto":
+            cmd = ["bash", str(script), "auto"]
+        elif action == "version":
+            if not re.match(r"^[0-9]+\.[0-9]+\.[0-9]+$", version or ""):
+                print(json.dumps({"ok": False, "error": "Ungültige Zielversion"}, ensure_ascii=False)); sys.exit(1)
+            cmd = ["bash", str(script), version]
+        else:
+            print(json.dumps({"ok": False, "error": "Nextcloud-Aktion nicht erlaubt"}, ensure_ascii=False)); sys.exit(1)
+    else:
+        if action not in cfg["actions"]:
+            print(json.dumps({"ok": False, "error": "Aktion nicht erlaubt"}, ensure_ascii=False)); sys.exit(1)
+        cmd = ["bash", str(script), action]
+
+    timeout = 14400 if action in ("update", "backup", "auto", "version") else 600
+    rc, out = run(cmd, timeout)
+    print(json.dumps({"ok": rc == 0, "component": component, "action": action, "version": version, "rc": rc, "output": out[-30000:]}, ensure_ascii=False))
+    sys.exit(0 if rc == 0 else 1)
+
+def main():
+    if os.geteuid() != 0:
+        print(json.dumps({"ok": False, "error": "root erforderlich"}, ensure_ascii=False)); sys.exit(1)
+    if len(sys.argv) < 2 or sys.argv[1] == "status":
+        status()
+    elif sys.argv[1] == "run":
+        if len(sys.argv) < 4:
+            print(json.dumps({"ok": False, "error": "run braucht Komponente und Aktion"}, ensure_ascii=False)); sys.exit(1)
+        version = sys.argv[4] if len(sys.argv) >= 5 else ""
+        execute(sys.argv[2], sys.argv[3], version)
+    else:
+        print(json.dumps({"ok": False, "error": "unbekannte Aktion"}, ensure_ascii=False)); sys.exit(1)
+
+if __name__ == "__main__":
+    main()

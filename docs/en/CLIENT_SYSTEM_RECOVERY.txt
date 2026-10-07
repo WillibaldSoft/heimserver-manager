@@ -1,0 +1,79 @@
+SYSTEM BACKUP & RESTORE – LINUX CLIENT 0.3.3
+
+Open the same-named button under Own Client Backups on the client.
+The guided process runs in the client window and requires local administrator rights. Select folders via file picker; mounted USB/NFS mounts are offered as shortcuts. Additional script prompts appear as dialogs, while the log remains visible in the window. The portable live-USB package stays terminal-based. Normal file/home backup and individual file restore remain on the client.
+
+BACKUP TARGET
+- Mounted USB drive with Linux filesystem, e.g., ext4.
+- Alternatively, a mounted NFS share on the server. Owner and ACLs must actually be preserved; this is verified with an own test file.NFS must be set up beforehand. No blanket root share for the LAN.
+- The HTTPS client token does not configure an NFS share. For the duration of the NFS process, pause the sleep schedule on the server. The file backup HTTPS path remains available regardless and requires no NFS share.
+- FAT/exFAT/NTFS/SMB are not targets for this loose system component format. Normal ZIP file backups to USB can still use other filesystems.
+- Each new run receives its own system timestamp folder. Earlier states are not overwritten. Large working data remain on the selected target.
+
+BACKUP
+Select the normal client user. The process takes over their Home, program lists and package sources, desktop settings as well as system configurations supported by the template. Choose Normal/Comprehensive or Slim.
+Close programs beforehand. Running databases and virtual machines are not captured consistently as a complete system. The result is not a disk image.
+Reports include missing or unavailable components.
+
+RESTORE
+1. Boot from the Linux Live USB. Mount an existing Linux base installation separately as the target, e.g., at /mnt/linux; create the target user beforehand.
+2. Mount the backup repository via USB/NFS. The script does not partition or format.
+3. Install the client or unpack and start the portable package:
+      sudo bash system-recovery.sh
+   Required: python3, rsync, acl, gnupg and standard Linux mount tools.
+   Pre-check without changes: bash system-recovery.sh --check
+4. Select restore; specify backup folder with files/ and apps/.
+5. Select installed target system and its existing user.
+6. Choose Home, Programs & Desktop or full supported system restoration,
+   verify target details and confirm RESTORE.
+
+# LIMITATIONS
+- Only the live target is allowed as a System Restore. Backups marked .unvollstaendig must first be checked.
+- Package availability, distribution, version and architecture affect the result. Deviating platforms are treated as migrations.
+- User programs, Flatpak/Snap installations and user/group alignment can be omitted in the live system and require manual follow-up after booting.
+   Reports are decisive; end of process does not guarantee completeness.
+- No automatic setup of partitions, encryption or bootloader.
+- Retrieve files into a new folder: use normal file restore.
+   The system components format is independent from ZIP file backups.
+- Manager administrator login for server backups cannot be bypassed.
+   This assistant operates on the local Linux client, not on the manager.
+- Protection checks and package builds tested. A full restore on real target hardware has not yet been performed for this client integration.
+
+# DIRECT TO SERVER (HTTPS, CLIENT 0.3.2)
+Select "Backup this Linux client directly to the server (HTTPS)" in the system assistant.
+Uses your own JSON client profile and a valid HTTPS certificate.
+No SMB/NFS share, no complete local intermediate copy. Local
+administrator permission only for reading system data; client token remains with
+the logged-in desktop user. The manager's backup limit still applies.
+Linux system files, installed programs, configuration and users with UID/GID,
+ACLs, extended attributes and links are backed up as system.tar in ZIP.
+Root filesystem and usual separate system partitions are considered;
+other mounts, virtual file systems and temporary directories are excluded.
+Stop applications and databases beforehand: no consistent snapshot of running
+services, no disk image, no partition table and no bootloader.
+This format is independent from the components assistant. Normal file restore
+provides system.tar and INSTRUCTIONS.txt in a new folder; additional storage is required for this.
+Extract files specifically from the TAR. Full restore exclusively in live system with manual verification of partitions,
+filesystem assignment and bootloader. For this TAR format starting client 0.3.3 use your own HTTPS Restore;
+don't select it in the previous components assistant.
+On proxy timeout after upload, the client checks the final status based on identifier, size and checksum before reporting success.
+
+# RESTORE HTTPS SYSTEM ARCHIVE (FROM CLIENT 0.3.3)
+1. Boot Linux live system, install client and load your own client profile.
+   Set up private HTTPS with verified root certificate if required.
+2. Mount existing Linux base installation separately as target. Supported is
+   a shared Root/Home filesystem without mounted partitions below it.
+   Separate Home/Boot/EFI partitions must be handled separately.
+3. Mount external Linux workspace, keep at least twice ZIP size plus reserve free.
+   Workspace may not be live system nor restore target.
+4. Open "Restore System Archive from Server (Live USB)". Select a server backup snapshot,
+   workspace and target; start download and verification.
+5. After administrator approval, protected check copy, checksum, ZIP integrity,
+   archive paths and free target space are verified. Verify target and scope
+   and enter RESTORE. Aborting before this changes no target files.
+6. Restore files, owners, permissions, ACLs and extended attributes.
+   Target fstab/crypttab remain intact; additional target files are not deleted.
+7. Check result. Partitions, bootloader and hardware adjustments must be
+   checked/configured separately before booting. Downloaded ZIP remains on workspace.
+If errors occur after start, a partial state may remain in the target. A full
+restore on real target hardware has not yet been validated.

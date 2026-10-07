@@ -1,0 +1,219 @@
+#!/bin/bash
+set -euo pipefail
+
+SERVICES=(
+  server-manager.service
+  multi-dyndns-update.service
+  tvheadend.service
+  oscam.service
+  docker.service
+  mariadb.service
+  apache2.service
+  smbd.service
+  nmbd.service
+  ssh.service
+  cron.service
+  libvirtd.service
+  openipmi.service
+  smartmontools.service
+)
+
+json_escape() {
+  python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))'
+}
+
+unit_ok() {
+  [[ "$1" =~ ^[A-Za-z0-9_.@:-]+\.service$ ]]
+}
+
+cmd_services() {
+  echo '['
+  first=1
+  for u in "${SERVICES[@]}"; do
+    if ! systemctl list-unit-files "$u" >/dev/null 2>&1; then
+      continue
+    fi
+    active=$(systemctl is-active "$u" 2>/dev/null || true)
+    enabled=$(systemctl is-enabled "$u" 2>/dev/null || true)
+    desc=$(systemctl show "$u" -p Description --value 2>/dev/null || true)
+    [[ $first -eq 0 ]] && echo ','
+    first=0
+    python3 - <<PY
+import json
+print(json.dumps({"unit":"$u","active":"$active","enabled":"$enabled","description":"$desc"}, ensure_ascii=False), end="")
+PY
+  done
+  echo ']'
+}
+
+cmd_failed() {
+  systemctl --failed --no-legend --plain 2>/dev/null | python3 -c '
+import sys,json
+rows=[]
+for line in sys.stdin:
+    p=line.split(None,4)
+    if len(p)>=4:
+        rows.append({"unit":p[0],"load":p[1],"state":p[2],"sub":p[3],"description":p[4] if len(p)>4 else ""})
+print(json.dumps(rows, ensure_ascii=False))
+'
+}
+
+cmd_timers() {
+  systemctl list-timers --all --no-legend --plain 2>/dev/null | head -80 | python3 -c '
+import sys,json
+rows=[]
+for line in sys.stdin:
+    p=line.split()
+    if len(p)>=6:
+        rows.append({"next":" ".join(p[0:4]),"left":p[4],"unit":p[5],"active":p[6] if len(p)>6 else ""})
+print(json.dumps(rows, ensure_ascii=False))
+'
+}
+
+cmd_sockets() {
+  systemctl list-sockets --all --no-legend --plain 2>/dev/null | head -80 | python3 -c '
+import sys,json
+rows=[]
+for line in sys.stdin:
+    p=line.split(None,3)
+    if len(p)>=3:
+        rows.append({"listen":p[0],"unit":p[1],"active":p[2]})
+print(json.dumps(rows, ensure_ascii=False))
+'
+}
+
+cmd_boot() {
+  uptime_s=$(uptime -p 2>/dev/null || true)
+  boot_s=$(uptime -s 2>/dev/null || true)
+  kernel=$(uname -r 2>/dev/null || true)
+  reboot="nein"
+  [[ -e /var/run/reboot-required ]] && reboot="ja"
+  python3 - <<PY
+import json
+print(json.dumps({"uptime":"$uptime_s","boot":"$boot_s","kernel":"$kernel","reboot_required":"$reboot"}, ensure_ascii=False))
+PY
+}
+
+cmd_docker() {
+  active=$(systemctl is-active docker.service 2>/dev/null || true)
+  containers="-"
+  if command -v docker >/dev/null 2>&1; then
+    containers=$(docker ps --format '{{.Names}}' 2>/dev/null | wc -l | tr -d ' ' || true)
+  fi
+  python3 - <<PY
+import json
+print(json.dumps({"active":"$active","containers":"$containers"}, ensure_ascii=False))
+PY
+}
+
+cmd_kvm() {
+  active=$(systemctl is-active libvirtd.service 2>/dev/null || true)
+  vms="-"
+  if command -v virsh >/dev/null 2>&1; then
+    vms=$(virsh list --all --name 2>/dev/null | grep -c . || true)
+  fi
+  python3 - <<PY
+import json
+print(json.dumps({"active":"$active","vms":"$vms"}, ensure_ascii=False))
+PY
+}
+
+cmd_processes() {
+  ps -eo pid,pcpu,pmem,comm --sort=-pcpu 2>/dev/null | head -16 | tail -15 | python3 -c '
+import sys,json
+rows=[]
+for line in sys.stdin:
+    p=line.split(None,3)
+    if len(p)>=4:
+        rows.append({"pid":p[0],"cpu":p[1],"mem":p[2],"cmd":p[3]})
+print(json.dumps(rows, ensure_ascii=False))
+'
+}
+
+check_cmd() {
+  local name="$1"; shift
+  local out rc
+  set +e
+  out=$("$@" 2>&1)
+  rc=$?
+  set -e
+  python3 - <<PY
+import json
+print(json.dumps({"name":"$name","ok": $([[ $rc -eq 0 ]] && echo True || echo False), "details": ${out@Q}}, ensure_ascii=False))
+PY
+}
+
+cmd_checks() {
+  echo '['
+  first=1
+  emit(){ [[ $first -eq 0 ]] && echo ','; first=0; "$@"; }
+  command -v apachectl >/dev/null 2>&1 && emit check_cmd "apachectl configtest" apachectl configtest || true
+  command -v testparm >/dev/null 2>&1 && emit check_cmd "samba testparm" testparm -s || true
+  command -v docker >/dev/null 2>&1 && emit check_cmd "docker ps" docker ps || true
+  command -v mysqladmin >/dev/null 2>&1 && emit check_cmd "mariadb ping" mysqladmin ping || true
+  emit check_cmd "systemctl failed" bash -lc '! systemctl --failed --no-legend | grep -q .'
+  echo ']'
+}
+
+cmd_journal() {
+  lines="${1:-40}"
+  unit="${2:-}"
+  if [[ -n "$unit" ]]; then
+    unit_ok "$unit" || { echo '{"ok":false,"lines":["invalid unit"]}'; exit 0; }
+    journalctl -u "$unit" -n "$lines" --no-pager 2>/dev/null | python3 -c 'import sys,json; print(json.dumps({"ok":True,"lines":sys.stdin.read().splitlines()}, ensure_ascii=False))'
+  else
+    journalctl -n "$lines" --no-pager 2>/dev/null | python3 -c 'import sys,json; print(json.dumps({"ok":True,"lines":sys.stdin.read().splitlines()}, ensure_ascii=False))'
+  fi
+}
+
+cmd_unit() {
+  unit="${1:-}"
+  unit_ok "$unit" || { echo '{"ok":false,"error":"invalid unit"}'; exit 0; }
+  systemctl cat "$unit" 2>/dev/null | python3 -c 'import sys,json; print(json.dumps({"ok":True,"content":sys.stdin.read()}, ensure_ascii=False))'
+}
+
+cmd_deps() {
+  unit="${1:-}"
+  unit_ok "$unit" || { echo '[]'; exit 0; }
+  systemctl list-dependencies "$unit" --plain --no-pager 2>/dev/null | python3 -c 'import sys,json; print(json.dumps(sys.stdin.read().splitlines(), ensure_ascii=False))'
+}
+
+cmd_service_action() {
+  action="${1:-}"; unit="${2:-}"
+  unit_ok "$unit" || { echo 'invalid unit' >&2; exit 2; }
+  case "$action" in
+    start|stop|restart|reload|enable|disable)
+      sudo systemctl "$action" "$unit"
+      ;;
+    *) echo "invalid action" >&2; exit 2 ;;
+  esac
+}
+
+cmd_tool() {
+  action="${1:-}"
+  case "$action" in
+    daemon-reload) sudo systemctl daemon-reload ;;
+    reset-failed) sudo systemctl reset-failed ;;
+    apt-clean) sudo apt clean ;;
+    journal-vacuum) sudo journalctl --vacuum-time=14d ;;
+    *) echo "invalid tool" >&2; exit 2 ;;
+  esac
+}
+
+case "${1:-}" in
+  services) cmd_services ;;
+  failed) cmd_failed ;;
+  timers) cmd_timers ;;
+  sockets) cmd_sockets ;;
+  boot) cmd_boot ;;
+  docker) cmd_docker ;;
+  kvm) cmd_kvm ;;
+  processes) cmd_processes ;;
+  checks) cmd_checks ;;
+  journal) shift; cmd_journal "$@" ;;
+  unit) shift; cmd_unit "$@" ;;
+  deps) shift; cmd_deps "$@" ;;
+  service-action) shift; cmd_service_action "$@" ;;
+  tool) shift; cmd_tool "$@" ;;
+  *) echo "usage: $0 services|failed|timers|sockets|boot|docker|kvm|processes|checks|journal|unit|deps|service-action|tool" >&2; exit 2 ;;
+esac

@@ -1,0 +1,44 @@
+PLATTFORMPAKETE
+Debian 13: regulärer Stand. Linux Mint 22.x: weiterhin experimentell.
+Den Status des jeweiligen Pakets in PLATTFORM.txt beachten.
+Vorab: sh install_deb.sh --check DATEI.deb
+Debian-Paket nur Debian 13; Mint-Paket nur Mint 22.x mit Ubuntu-Noble-Basis.
+Debian-Ersteinrichtung und Zusatzmodus sind auf Mint nicht verfügbar.
+Weitere Einschränkungen: docs/PLATTFORMEN.md im Quellarchiv.
+
+HEIMSERVER MANAGER – INSTALLATION UND ZUSÄTZE
+
+Zielsystem: Debian 13 mit systemd. Paketarchitektur: all; einzelne Anwendungen
+und optionale Hardware benötigen passende Architektur und Treiber.
+
+1. Komplett-ZIP entpacken oder DEB und install_deb.sh zusammen herunterladen.
+2. Einzelne DEB prüfen: sha256sum -c Heimserver_Manager_*.deb.sha256
+   Alle separat geladenen Assets prüfen: sha256sum -c SHA256SUMS
+3. Als normaler Benutzer starten: sh ./install_deb.sh
+
+Modus 1: Manager installieren oder aktualisieren.
+Modus 2: Debian 13 nach Offline-Installation vorbereiten, dann Manager installieren.
+Modus 3: Nur Zusatzprogramme, ohne Manager-Installation.
+
+Optional: Verwaltungswerkzeuge, Firmwarepakete, CPU-Microcode, NetworkManager,
+Systempflege sowie SSH und XRDP/XFCE. Jede Auswahl wird erläutert und bestätigt.
+Diese Programme sind NICHT in der DEB enthalten; APT lädt sie bei Bedarf.
+Das Paket ist kein vollständiger Offline-Installer.
+
+Updates können den Managerdienst neu starten. Laufende Aufträge vorher abschließen
+und Daten sichern. Vorhandene manuelle Installationen werden vom DEB nicht
+ungeprüft übernommen: dafür ist zuerst eine gesonderte Migration erforderlich.
+Eine frische Installation startet laut Paketkonfiguration mit ADMIN/ADMIN;
+den Zugang sofort unter Einstellungen ändern und nicht öffentlich exponieren.
+HTTPS-Port und Zugang über Rechnername sowie Server-IP zeigt der Installer an.
+HTTP ist nur intern auf 127.0.0.1 erreichbar. Privates Stammzertifikat auf Clients
+importieren und den angezeigten Fingerabdruck prüfen. Namensauflösung im Router
+oder in hosts einrichten; der zusätzliche IP-Zugang benötigt keinen DNS-Namen.
+Bestehende HTTP-Agenten auf HTTPS umstellen, neues Profil importieren und
+Zertifikatvertrauen einrichten. Bei fehlgeschlagener HTTPS-Einrichtung über das
+Server-Terminal Apache/Ports prüfen und sudo dpkg --configure server-manager
+wiederholen. Kein externer HTTP-Ersatzzugang. Kein automatischer Reboot.
+
+Das Quellarchiv enthält eine explizite Dateiauswahl ohne Serverzustand oder
+Git-Historie. SHA256SUMS schützt gegen beschädigte/abweichende Downloads,
+ist aber keine kryptographische Herausgebersignatur.

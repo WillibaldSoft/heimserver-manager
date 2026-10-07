@@ -1,0 +1,11 @@
+#!/bin/bash
+set -euo pipefail
+# Server Manager Shares Helper
+# Wird derzeit als versionierter Platzhalter mitgeliefert. Das Modul nutzt direkte sudo-Aufrufe.
+case "${1:-}" in
+  testparm) exec testparm -s ;;
+  exportfs) exec exportfs -v ;;
+  reload-smb) exec systemctl reload smbd.service ;;
+  reload-nfs) exec systemctl reload nfs-server.service ;;
+  *) echo "usage: $0 {testparm|exportfs|reload-smb|reload-nfs}"; exit 2 ;;
+esac

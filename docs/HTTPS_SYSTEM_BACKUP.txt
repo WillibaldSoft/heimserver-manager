@@ -1,0 +1,71 @@
+HTTPS-SYSTEMSICHERUNG UND RÜCKSICHERUNG – LINUX-CLIENT 0.4.0
+
+BEDIENUNG
+1. Manager-Konto mit Eigene Client-Sicherungen freischalten (Rolle Benutzer)
+   oder bisheriges persönliches Agentenprofil verwenden. Server-Backups bleiben
+   Administratoren vorbehalten. Lokale Systemdateien benötigen pkexec-Freigabe.
+2. Im Client anmelden → Eigene Sicherungen → System sichern & wiederherstellen.
+3. Quellsystem / verwenden, oder vom Live-USB ein installiertes Linux unter
+   einem separaten Mountpunkt wählen. Zusatzdatenträger als Mountpunkte im
+   gewählten Quellsystem eintragen, durch Semikolon getrennt.
+4. Netzwerkprofile mit Zugangsdaten nur bei Bedarf ausdrücklich einschließen.
+5. HTTPS-Sicherung starten. Keine lokale Zwischenkopie des Systemarchivs.
+
+INKREMENTELL
+Der erste Stand überträgt alle neuen Blöcke. Weitere Stände senden nur noch
+unbekannte 4-MiB-Blöcke an dieselbe Konto-/Profilablage. Alle Quellen werden
+bei jedem Lauf erneut gelesen. Dateiänderungen/verschobene Blockgrenzen können
+zusätzliche Übertragung verursachen; keine Zusage eines dateigenauen Deltas.
+Jeder Stand hat ein vollständiges Manifest und ist unabhängig auswählbar.
+Einzelne Blöcke können von mehreren Ständen verwendet werden: niemals manuell
+löschen. Abbruch gibt keinen fertigen Stand frei. Unvollständige Übertragung
+im Client verwerfen; dabei werden nur unreferenzierte Blöcke entfernt.
+Der Manager zeigt logische Gesamtgröße und tatsächlich belegten Speicher.
+
+ENTHALTEN WIE BEI DEN SYSTEMKOMPONENTEN DES URSPRUNGSSKRIPTS
+- Alle Benutzer-Homes einschließlich versteckter Desktop-Einstellungen.
+- Native Programme mit Paketdatenbank, Versionen, Paketquellen und Schlüsseln.
+- System-/Benutzer-Flatpak, Snap, pip/pipx/npm und lokale Programme/AppImages,
+  soweit deren Dateien auf den gesicherten Dateisystemen liegen.
+- Benutzer/Gruppen, UID/GID, ACLs, erweiterte Attribute, Symlinks und Hardlinks.
+- Systemdienste samt Aktivierungslinks, Cron, lokale Programme und Konfiguration.
+- Drucker-/Udev-/SMB-/NFS-Konfiguration; ausgewählte weitere lokale Datenplatten.
+- Optional Netzwerkprofile; vollständige Systemarchive enthalten ohnehin
+  vertrauliche Daten wie Benutzerkonten und private Systemschlüssel.
+- Systeminventar mit Paketlisten, Benutzerprogrammen, Mounts, Hardware,
+  Partitionsreferenzen und gemeldeten Erfassungsfehlern. Nicht installierte
+  Inventarwerkzeuge werden dokumentiert. Offline werden keine Programme des
+  eingehängten Systems ausgeführt; Originaldateien bleiben im Archiv enthalten.
+
+RÜCKSICHERUNG
+- Auswählbar: gesamtes System, Home, Software, Desktop, Identitäten, Dienste,
+  Cron, Systemkonfiguration, Netzwerk oder einzelne Datei/Ordner.
+- Einzeldateien: im laufenden System in einen NEUEN Ordner, ohne Root-Rechte.
+  Links und Spezialdateien werden dabei ausgelassen; keine fremden Besitzrechte.
+- System/Komponenten: ausschließlich Live-System, vorbereitetes und eingehängtes
+  Linux-Ziel; gleiche Distribution, Version und Architektur. Für andere
+  Plattformen nur Dateien übernehmen; keine ungeprüfte Binär-/Paketmigration.
+- Separate Zielpartitionen vor Beginn einhängen; deren Typen und Identitäten
+  werden geprüft. fstab/crypttab des Zielsystems bleiben erhalten.
+- Externe Arbeitsablage für Download und geschützte Prüfkopie erforderlich:
+  konservativ zweimal logische Archivgröße plus Reserve. Prüfsumme und
+  Archivpfade werden vor Zieländerungen überprüft; Bestätigung erforderlich.
+- Zusätzliche vorhandene Zieldateien werden NICHT gelöscht. Kein Spiegel-Restore
+  mit automatischer Löschung. In einen vorbereiteten sauberen Zielstand sichern.
+
+GRENZEN – KEIN SEKTORWEISES 1:1-ABBILD
+Partitionierung, Bootloader und Hardware-/UUID-Anpassungen werden nicht
+blind automatisiert. Gesicherte Partitions-/Firmwareinformationen dienen als
+Referenz. Bootfähigkeit nach Rücksicherung separat prüfen/Bootloader erneuern.
+Laufende Datenbanken, Container und VMs vorher geordnet stoppen oder offline
+sichern. Die Dateikopie garantiert keine Anwendungskonsistenz laufender Dienste.
+Netzwerkfreigaben, virtuelle Dateisysteme und nicht ausgewählte Mounts bleiben
+ausgeschlossen. Archivverschlüsselung im Ruhezustand ist nicht integriert;
+HTTPS schützt die Übertragung, der Server schützt Ablagen mit Dateirechten.
+Der alte USB/NFS-Komponentenassistent bleibt ein separater Ablauf. Seine
+plattformübergreifende Paketmigration ist kein automatischer HTTPS-Systemrestore.
+
+ANMELDUNG
+Die eingestellte Sitzungsdauer gilt auch während einer Sicherung. Vor langen
+Läufen neu anmelden und ausreichend Zeit vorsehen. Ein Ablauf gibt keinen
+unvollständigen Sicherungsstand frei; bereits übertragene Blöcke bleiben erhalten.

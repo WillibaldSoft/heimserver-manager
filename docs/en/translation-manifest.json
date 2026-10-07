@@ -1,0 +1,302 @@
+{
+  "CHANGELOG.md": {
+    "english": "docs/en/CHANGELOG.md",
+    "english_sha256": "b6d908e253c1d9265194ca1c9d8467f5ce78fb58e66723f5d18c5b0a9cb3ca31",
+    "source_sha256": "6c3827fcb73c0b92b4c1da84b03a43f3d4d658978dc3aaa472543b2aa1e4c252"
+  },
+  "LICENSE_NOTICE.md": {
+    "english": "docs/en/LICENSE_NOTICE.md",
+    "english_sha256": "2bbd83f38d33893ced680f6b6feae3d6008525192409a465d6fd31fd562cde92",
+    "source_sha256": "508bcb53573afbc98754cc4e13074afa893e2c7440d85d3354dda2695476cdb3"
+  },
+  "README.md": {
+    "english": "docs/en/README.md",
+    "english_sha256": "b1d61eb62a095d0d711d52beb082020fcf67512fdd66eaf880a2c58f1f07786d",
+    "source_sha256": "9a1f50711f2877645a008ddf06d9f091bfcc7e3f3beb2b16c9752ba5c9dca8fa"
+  },
+  "THIRD_PARTY_NOTICES.md": {
+    "english": "docs/en/THIRD_PARTY_NOTICES.md",
+    "english_sha256": "2430fd9e4d0236e73a253d2c6af978b986535b25f25b2a1475501f18a395cc56",
+    "source_sha256": "10fc33ddb549912b485c9eb0b11e8e83c599f23cc604588f8cebed8be3a358a0"
+  },
+  "client_agent/desktop/README.txt": {
+    "english": "docs/en/client_agent/desktop/README.txt",
+    "english_sha256": "809360b98bb50f05b780b8439c919452bdbf8cb7788e44251d835be8e08018d8",
+    "source_sha256": "dee6f837d3ec96b912169d2199ec372bc7a18ddd81144e42306d879fb163b1a2"
+  },
+  "client_agent/windows/README.txt": {
+    "english": "docs/en/client_agent/windows/README.txt",
+    "english_sha256": "ecf212c638812d759b0cd82567a716cd980d7a031abcda363e6440308cc965ef",
+    "source_sha256": "727ad725d837989a592c605fda85b13490ea7f1646db1474180d70342337cf5a"
+  },
+  "docs/00_Core_Plugin_Loader.md": {
+    "english": "docs/en/00_Core_Plugin_Loader.md",
+    "english_sha256": "7c425b41272b00e11d0c48e779e182d762a79901917b51d23fbb2f98cf2716ef",
+    "source_sha256": "5630737da036b1187a3938dda4a9980eaef11073293b6fa64dfeb04d2fefb018"
+  },
+  "docs/01_Datenbank.md": {
+    "english": "docs/en/01_Datenbank.md",
+    "english_sha256": "a368aac13b4443fd9f6b99eed4e610d5728bccec0b4bcfabcbc7256d88dd38d8",
+    "source_sha256": "3a73e95e97a40a95cc8609ddf89d80f230ac9f69fe310dec6ca7717488004b75"
+  },
+  "docs/03_Heimnetz_ClientAgent.md": {
+    "english": "docs/en/03_Heimnetz_ClientAgent.md",
+    "english_sha256": "ffe45132974ad24bea405395b44a671e58f716be866511f923ea9b011248cc62",
+    "source_sha256": "5de0b688406e65dc2015241930daab424b54d89a46cc00f6bb1cf2398e4cf121"
+  },
+  "docs/04_TV_Tvheadend.md": {
+    "english": "docs/en/04_TV_Tvheadend.md",
+    "english_sha256": "dc14695457359b2f11599fdf95e71880bb6f1dcef62ca54b7010eea02f4159a1",
+    "source_sha256": "84d3bd2daf8f2928160aa4a338e592779f7c4bd7e81f446ddbcf8563daf8ad15"
+  },
+  "docs/04_TV_Tvheadend_Phase1.md": {
+    "english": "docs/en/04_TV_Tvheadend_Phase1.md",
+    "english_sha256": "d508f7acbd05c28ee32624265864edfa4c08751203fda14a0c1085fa414ad992",
+    "source_sha256": "01c04363445815d2a19e7b09dfc3fd79c2be7b44b46a8cc5391c986a3a5a794a"
+  },
+  "docs/04_TV_Tvheadend_Phase2.md": {
+    "english": "docs/en/04_TV_Tvheadend_Phase2.md",
+    "english_sha256": "94ef822a4a0a018bd91f7fda8361882d9bcc025900b4069d88731608e4b84b0b",
+    "source_sha256": "bf719c778862744060cf4856d7c4b602501a3098f330fbebe8c090d62e9ceec1"
+  },
+  "docs/05_TV_RTC_Aufnahmen.md": {
+    "english": "docs/en/05_TV_RTC_Aufnahmen.md",
+    "english_sha256": "15bff9ef572156c5ecf90c4b3b7ef6248acbdd5ab9e209854954608bc83c89bb",
+    "source_sha256": "7014b4d241ae62042a8405ed7d46004a78f2f387bb061788bd54c68a02b72e3c"
+  },
+  "docs/06_Sleep_Engine.md": {
+    "english": "docs/en/06_Sleep_Engine.md",
+    "english_sha256": "55a4c92c67cffa52afa1ef18e3d9f006b508f4d6626d3a187da919fbdf425003",
+    "source_sha256": "0578a1435b6188bd38a5e039730bc388a5dc87319e449543bcf981a9c9c11632"
+  },
+  "docs/07_Sleep_Schedules.md": {
+    "english": "docs/en/07_Sleep_Schedules.md",
+    "english_sha256": "9ebf162cc80fadec8e41b58a5cc56c9ab4e7f6ffc7214b2295ab678462971a73",
+    "source_sha256": "773dbd26436dc554ece57f861f95003cf198dde2408f4d65b609635e906dac5c"
+  },
+  "docs/08_TV_Server_Control_Blocker.md": {
+    "english": "docs/en/08_TV_Server_Control_Blocker.md",
+    "english_sha256": "6ae6da32f9a60a817bf592b23371b67f08da2c700a35d3fecaf414977ff2768c",
+    "source_sha256": "9ff892b0bf65af1ead3bc4d60a799777935d88d5c0d6fbea3850eae705058f4b"
+  },
+  "docs/ACCESS.md": {
+    "english": "docs/en/ACCESS.md",
+    "english_sha256": "f98150279eee84862452828edfa3b4ef4180900c83a4664a6cb69f3c27449510",
+    "source_sha256": "4453d0444f7d0ecd1378c7e65ac836306448307858ef82e33bb2da5b0eb6ef6d"
+  },
+  "docs/ALARMS.md": {
+    "english": "docs/en/ALARMS.md",
+    "english_sha256": "c06f2b5c07fe762677b5dd3925df652161479f6dfdb0b195f893a1870fa18242",
+    "source_sha256": "75ef903f61a61a5281279cec509b1676f3bd2c6267c6b861ebcc562a75a10eda"
+  },
+  "docs/APP_MANAGEMENT.md": {
+    "english": "docs/en/APP_MANAGEMENT.md",
+    "english_sha256": "7a53dddd2b3e99f994b2678238e87c01768116b693a31d666f96556b7229e0d3",
+    "source_sha256": "62942934f4fee6018bfb5f21ec6b927bd89067a164e2bc257272286119a00d30"
+  },
+  "docs/AUDIT.md": {
+    "english": "docs/en/AUDIT.md",
+    "english_sha256": "7f4db53c009e5fc1785b6967ffacb02347ebc6750dcbcf63204ed68ecf166523",
+    "source_sha256": "aec6d3044a19c5374c22f6934b9ea671ceb6aceae9ac3dacce62ac5146e697c2"
+  },
+  "docs/Apps-WebUI-Installer.md": {
+    "english": "docs/en/Apps-WebUI-Installer.md",
+    "english_sha256": "d99f260589e8f73ca276533fbea61aec287140613bbfba321eed968968021573",
+    "source_sha256": "09b8553d5bfa7c1e4015dedd8f060dea8e26ba0b2eefdab254d60984d05fbdcd"
+  },
+  "docs/CLIENT_BACKUP_ACCESS.md": {
+    "english": "docs/en/CLIENT_BACKUP_ACCESS.md",
+    "english_sha256": "dd5ff8ed1370447c1d50f088aaa0c1ea4fb28b65554e053526b1c8206f693206",
+    "source_sha256": "dcad3535657e6c75677b25cc55bf5c57dee8f40f9a525c62b58081952a93cdb0"
+  },
+  "docs/CLIENT_SYSTEM_RECOVERY.txt": {
+    "english": "docs/en/CLIENT_SYSTEM_RECOVERY.txt",
+    "english_sha256": "e844f7dca8bb0de86ba8caa71389d157ae928db4c028e18275a7cf90cef0ee77",
+    "source_sha256": "3d180b56df3dba7a1c7b6393a47b6c40aee7350b41c81b3e673bb34a9b11620f"
+  },
+  "docs/DEBIAN_PACKAGE.md": {
+    "english": "docs/en/DEBIAN_PACKAGE.md",
+    "english_sha256": "b7f7d2661ef3007664b6e640e5dad4404210d638d925466cf12e63da7b416f0f",
+    "source_sha256": "abdb13be78ae5229d5a64a7540f6a650945cbe2ec0ff2d839911ea28ba283119"
+  },
+  "docs/DOCUMENTATION.md": {
+    "english": "docs/en/DOCUMENTATION.md",
+    "english_sha256": "31f7f72b5e75733db27fccca786a8a08bf5f407663a90550edba10debe4613fa",
+    "source_sha256": "e886b71258855170b17dc210fd982f92c4d26ded2d47defa9dd2d18aa4750e06"
+  },
+  "docs/DOWNLOADS.md": {
+    "english": "docs/en/DOWNLOADS.md",
+    "english_sha256": "014f25da721f24e0dffbaeb5967a31acbf664db2335363030594244ea2213fe8",
+    "source_sha256": "f8d7a122b29f1705d06ba03186dc844d846a771498ff9699f8c0c86f74b7ea56"
+  },
+  "docs/Digital-Devices.md": {
+    "english": "docs/en/Digital-Devices.md",
+    "english_sha256": "9cc2a8de378cf9420d081a8fc6b2a2ee174e10f8115a6494cb9cdc2f581453b5",
+    "source_sha256": "d8c6dca2ed11fba273d7406e5c469cb0c9db525741c0bab373e5cdf02c756248"
+  },
+  "docs/DynDNS-Modul.md": {
+    "english": "docs/en/DynDNS-Modul.md",
+    "english_sha256": "6bf81a4f845d6e795495e5392bda831c4e82ad54c9b7ceabec1f26904da41a80",
+    "source_sha256": "346c46f741778877a965cdae51d6ae3c3bc8895f88a19f8f02888e0807f9d8b7"
+  },
+  "docs/Fotolabor-Fotoshow.md": {
+    "english": "docs/en/Fotolabor-Fotoshow.md",
+    "english_sha256": "f6bad3619c99b6136cbe9c3d93775298c536d783cba22ddbd30ee00493e9106f",
+    "source_sha256": "e17f6501bbedceb36f9a893fe36028a96380b8ff508642553f11956c656439f6"
+  },
+  "docs/Fotolabor.md": {
+    "english": "docs/en/Fotolabor.md",
+    "english_sha256": "616a5e5b9ae290c7847f5b713de6ef673bbf482f546e634bc2d0744cfe4ff724",
+    "source_sha256": "5cdb3601f1d52aadc8babd84c2cdc4abae32c63da07474f369f108c74ac7fa89"
+  },
+  "docs/Freigaben-Assistent.md": {
+    "english": "docs/en/Freigaben-Assistent.md",
+    "english_sha256": "673708fd007a116e5e5342b3ee5de9bc6558e8d43894792ba45693171d956a75",
+    "source_sha256": "d6258a1039401082d4d3ed136162952839fe64f2d3bdc095173e2a9f50df584f"
+  },
+  "docs/Freigaben-Benutzerrechte.md": {
+    "english": "docs/en/Freigaben-Benutzerrechte.md",
+    "english_sha256": "4c79d4f45b83060634d2d9652603ada80fb4189bab814995f8a31ef5f285ae74",
+    "source_sha256": "45b65962d7aa1e2f1e1ae63a6e6cbc245ff8afc62b744ecfa12fc2f59fdadc9d"
+  },
+  "docs/GITHUB_RELEASE.md": {
+    "english": "docs/en/GITHUB_RELEASE.md",
+    "english_sha256": "4d133b477fab507794f2d868205e4319dd7180d85266e516bf5386efbd620411",
+    "source_sha256": "ad6965bf30701f261f3eb3235eb89d8b519a0729892515196c1f06479498a8fa"
+  },
+  "docs/HTTPS_SYSTEM_BACKUP.txt": {
+    "english": "docs/en/HTTPS_SYSTEM_BACKUP.txt",
+    "english_sha256": "ecb96593941071fc8f1cc494c24f1acf4d24034afb928b415914f662cfd2e5de",
+    "source_sha256": "dee6a8ff44fe07eb5afb62a5c647e1cfd373c00f431f6932ef93d42c0f38b832"
+  },
+  "docs/Heimserver_Manager_Funktionsuebersicht.txt": {
+    "english": "docs/en/Home_Server_Manager_Features.txt",
+    "english_sha256": "739826d3512241e444c248944a09b10c6ef33ac172282106eee5664ccaf08f6d",
+    "source_sha256": "b17fff88612eac0c67c7990f1e27420328282469447b8de8815d8dc456c5a125"
+  },
+  "docs/Heimserver_Manager_Versionsaenderungen.txt": {
+    "english": "docs/en/Home_Server_Manager_Version_History.txt",
+    "english_sha256": "54732d98717b964972a5f20e2550a719d3a00e49d545418806c4774c9189e770",
+    "source_sha256": "0678a53ea06e524556a2a667ef18471e740221d5b95eb08ce5e628cdf1ec5748"
+  },
+  "docs/Installer.md": {
+    "english": "docs/en/Installer.md",
+    "english_sha256": "0f827ccd4b1159d050e34fd699bdd395e8abb9e499608edf910f7d1b3729d504",
+    "source_sha256": "d827ef636d74bc3fb624ed2fc8952442a16a9108cf0e7464a41391445ad47f9f"
+  },
+  "docs/KVM-Backup.md": {
+    "english": "docs/en/KVM-Backup.md",
+    "english_sha256": "b8ccc299b61a1e591d043947ac703a6755759f6e521da17ade12e8bae7d009d7",
+    "source_sha256": "3b0b71b8bd2f25f02b9f33131bec64c4bf16468146801dcba38527558e09c2ea"
+  },
+  "docs/KVM-Schlafsteuerung.md": {
+    "english": "docs/en/KVM-Schlafsteuerung.md",
+    "english_sha256": "5f3cce9668169b157895ce839d8b1c956eaf74d75bb41a268fa62f54a444ab6a",
+    "source_sha256": "1c94ab69661aa1e0989002faa9679cb05a7920da9a538ef2b234f561b9299778"
+  },
+  "docs/KVM-Verwaltung.md": {
+    "english": "docs/en/KVM-Verwaltung.md",
+    "english_sha256": "cc81104afa79fc64784c9600737191c7cc7baeaccf703ce8d4095561f38af632",
+    "source_sha256": "25849a53336b069236c6fe0109358e96418a12f2bd476ba0081762f33847acc4"
+  },
+  "docs/KVM_INSTALL.md": {
+    "english": "docs/en/KVM_INSTALL.md",
+    "english_sha256": "a9ed4f245e9b0352a1fe591f54e388550e3ac25fbd66c2b56b2e6a578671cc99",
+    "source_sha256": "a63ef7f7bf563d63abd597fda2b8d76386679e74385d331d1968920d6555380f"
+  },
+  "docs/MANAGER_HTTPS.md": {
+    "english": "docs/en/MANAGER_HTTPS.md",
+    "english_sha256": "30e17c4578aca766bd7628b3239eee3d4f43d5d1be835e57f7b1e52e799e1a43",
+    "source_sha256": "7f82f6cd105a85f698c4f5e4edbe3590bc1c0661f43c325bc3def3751443f267"
+  },
+  "docs/MANAGER_UPLOAD_UPDATE.md": {
+    "english": "docs/en/MANAGER_UPLOAD_UPDATE.md",
+    "english_sha256": "5c557b6c51b1434ccbdb9203927c0ef55175ccbdcae0570462e7a2697862ae84",
+    "source_sha256": "809493566fbf766407cf9ec566b08fb7cb6e35cba642c15e1869ab180b0fac08"
+  },
+  "docs/Modulauswahl.md": {
+    "english": "docs/en/Modulauswahl.md",
+    "english_sha256": "54893a9c40b17808d519fa6ccfff0e38adc6dc8b92a8fa85b69b3c74db262772",
+    "source_sha256": "06de813d51b3f92d29556fed3c0f3a303af4ad61fb61ed1eb266965143bf0d2a"
+  },
+  "docs/NEXTCLOUD_SETUP.md": {
+    "english": "docs/en/NEXTCLOUD_SETUP.md",
+    "english_sha256": "03864f3f4d8ec1525da45572bdcea5fc40d206521c53db2690da36b106bb9782",
+    "source_sha256": "5ddefec07e1bc4b0b3bcf23b5fe20f20feb54a035fea6fb5dde0a19dc8b0f467"
+  },
+  "docs/NVIDIA.md": {
+    "english": "docs/en/NVIDIA.md",
+    "english_sha256": "cc71691a43c738b1d0e44a521ba17db9b3314c70868aab80cc113c6e49d90026",
+    "source_sha256": "e41a3656b35daac1ccc70ce30d9c1bdf0d10ea528123c11c10124288dac14c92"
+  },
+  "docs/PLATTFORMEN.md": {
+    "english": "docs/en/PLATTFORMEN.md",
+    "english_sha256": "4a97c23c9d03bee3e0215b97ddfc7fc5c62f029712418b432ae42a0b58f1ba8b",
+    "source_sha256": "6f5803b137bdcc8fb79f9f7f93794aacbd3949c10acbc94cde56cbfedeccceec"
+  },
+  "docs/Qwen-Modelle.md": {
+    "english": "docs/en/Qwen-Modelle.md",
+    "english_sha256": "76279f35e05d5361c3b09925dbe470a6d8afd062b91c752b7d7a3b907e08c4ff",
+    "source_sha256": "8fa2f7fe06d8359a6be15ef7a3ad9fe35d396affb88e8babf77607bdba7afeb9"
+  },
+  "docs/RELEASE_INSTALLATION.txt": {
+    "english": "docs/en/RELEASE_INSTALLATION.txt",
+    "english_sha256": "1cba793df9900fe0ef24a1037822ab9347a1a11067534191e3842c4835ee2a2a",
+    "source_sha256": "24534396de7ca3862539a69293b16b22c31497586e57867d233ba8e5b44f7d20"
+  },
+  "docs/RELEASE_PRIVACY.md": {
+    "english": "docs/en/RELEASE_PRIVACY.md",
+    "english_sha256": "002fe07bab03cbb66ac57ec61d69485332dcafe04a4fcc2a5b45498fd15c8a9d",
+    "source_sha256": "52a57051cc6d847cd65508419bce38823a02a160f5598cad933c414167c025a5"
+  },
+  "docs/SERVER_PATHS.md": {
+    "english": "docs/en/SERVER_PATHS.md",
+    "english_sha256": "e3398139dc2ead1db765295c3f17379e867e49dc29f656c53a3779d981d43a80",
+    "source_sha256": "4a3320a9ea5d7ddd50ea3370a6f8d7b4e335f10a7fb3e4d6f6e68c62b65d660f"
+  },
+  "docs/SLEEP_WAKE_AUDIT.md": {
+    "english": "docs/en/SLEEP_WAKE_AUDIT.md",
+    "english_sha256": "851333319538b541f7b5d596f9a5d54cf96d8467bdbad3037050f44783d6cea3",
+    "source_sha256": "ebc7f25c0887331daa8cbe679ba902ed3428a13ae88c6a9cd84c6d90399bf063"
+  },
+  "docs/Scanner-Modul.md": {
+    "english": "docs/en/Scanner-Modul.md",
+    "english_sha256": "92fc7a7b786776572e6feffc76c2234715bef3a6ae77989100b81531a073bbe6",
+    "source_sha256": "37b9288aff0f77c5c42a4fb4a956701d11b5eb8634ce5c063ee690622f0026b4"
+  },
+  "docs/TRANSLATIONS.md": {
+    "english": "docs/en/TRANSLATIONS.md",
+    "english_sha256": "09bb541af77ef39d821ecce5aa7f7e0566356c3ea88d3a3f049a5a6f06afc90f",
+    "source_sha256": "ffda80db18202f710688469f0ace3ec9d25dc0f8c9b3d116eabced627f1f92fd"
+  },
+  "docs/USER_ADMIN.md": {
+    "english": "docs/en/USER_ADMIN.md",
+    "english_sha256": "2d0fccfdcd14da0f82254308ea375a39f36a80702c1952758ea88c80f8b8a30b",
+    "source_sha256": "a0fb02e49ecfe34e364d1c471aed8aac1f9d61f04ccc9da030ad96f7648010bc"
+  },
+  "docs/WEB_SECURITY.md": {
+    "english": "docs/en/WEB_SECURITY.md",
+    "english_sha256": "3c59a8e81e53d0f6663f052182b414325ff49e1df8c5ac31a73e05d42d64a0fa",
+    "source_sha256": "a398eabdbb21e2c383f00936a4b35bee0922a21fdd15b1967de3dabb1eb2baa0"
+  },
+  "docs/server-control.md": {
+    "english": "docs/en/server-control.md",
+    "english_sha256": "e8db89bf0782f47c1e8ac9b3abe9a0d6405f27f584f1cb3f8e284939bc3465ff",
+    "source_sha256": "ceb893413944ff547c464cc457307a3adaee6c43d4071e04a0c5623425447b8a"
+  },
+  "migrations/README.md": {
+    "english": "docs/en/migrations/README.md",
+    "english_sha256": "a1835a328a03895ddb3784011b64a95c8518dce9849948fe6f01692ea3e07db4",
+    "source_sha256": "ae3f031feb5b96e9506f14459ce136f888d6534d172264aaaefefbd29a3e085c"
+  },
+  "tools/backup/README.md": {
+    "english": "docs/en/tools/backup/README.md",
+    "english_sha256": "982419d1f359736746176a73f6f91e7bf9428211925c47a851eab78acdb65572",
+    "source_sha256": "1540963c4d7200a2ec4f651a1393722829e2ca6fd4b53fadbe0184fd9fccc300"
+  },
+  "tools/power_api/README.txt": {
+    "english": "docs/en/tools/power_api/README.txt",
+    "english_sha256": "0ac3da3baf058506cbe753c9b3fbb8dddcba7a551df0f38577e154d783d1705a",
+    "source_sha256": "2836cec361189cfd851c5286e5b8bcc77ccc9f14bcb0911227820c11dfbb7c15"
+  }
+}

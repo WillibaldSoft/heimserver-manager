@@ -1,0 +1,30 @@
+Template: server-manager/port
+Type: string
+Default: 9877
+Description: Interner Backend-Port des Heimserver Managers:
+ Wählen Sie einen freien Port zwischen 1 und 65535. Standard ist 9877.
+ Dieser Port ist nur lokal auf 127.0.0.1 erreichbar. Browser und Clients
+ verwenden ausschließlich HTTPS über Apache.
+ Bestehende Installationen behalten ihren bisherigen Port als Vorgabe.
+
+Template: server-manager/port-error
+Type: error
+Description: Der gewählte Server-Manager-Port ist ungültig oder belegt.
+ Bitte einen freien Port zwischen 1 und 65535 eingeben.
+ Bei automatischer Installation den Wert server-manager/port per
+ debconf-set-selections vorbelegen und die Paketkonfiguration wiederholen.
+
+Template: server-manager/https-port
+Type: string
+Default: 443
+Description: HTTPS-Port für den privaten Manager-Hostnamen:
+ Standard 443. Ein freier eigener HTTPS-Port ist ebenfalls möglich.
+ Der Rechnername wird übernommen. Bestehende HTTPS-Einstellungen bleiben erhalten.
+
+Template: server-manager/https-ip-port
+Type: string
+Default: 8443
+Description: Zusätzlicher HTTPS-Port für den Zugriff über die Server-IP:
+ Standard 8443. Muss vom Hostnamen-HTTPS-Port und Backend-Port verschieden sein.
+ Die lokale IP wird über die Standardroute ermittelt. Das private Stammzertifikat
+ muss auf Clients vertraut werden. Die gewählten Adressen zeigt die Installation.

@@ -1,0 +1,36 @@
+#!/bin/sh
+set -eu
+. /usr/share/debconf/confmodule
+if [ -n "${2:-}" ] && [ -r /etc/server-manager/server-manager.env ]; then
+    current=$(sed -n 's/^SERVER_MANAGER_PORT=\([0-9][0-9]*\)$/\1/p' /etc/server-manager/server-manager.env | tail -1)
+    if [ -n "$current" ]; then db_set server-manager/port "$current"; fi
+fi
+attempt=0
+while :; do
+    db_input high server-manager/port || true
+    db_go || true
+    db_get server-manager/port
+    port=$RET
+    valid=yes
+    case "$port" in ''|*[!0-9]*) valid=no ;; esac
+    if [ "$valid" = yes ]; then
+        if [ "${#port}" -gt 5 ] || [ "$port" -lt 1 ] || [ "$port" -gt 65535 ]; then valid=no; fi
+    fi
+    if [ "$valid" = yes ] && [ -f /opt/server-manager/tools/server_port.py ]; then
+        /usr/bin/python3 /opt/server-manager/tools/server_port.py --check "$port" >/dev/null 2>&1 || valid=no
+    elif [ "$valid" = yes ] && command -v ss >/dev/null 2>&1; then
+        if [ -n "$(ss -H -ltn "sport = :$port")" ]; then valid=no; fi
+    fi
+    if [ "$valid" = yes ]; then break; fi
+    attempt=$((attempt + 1))
+    if [ "${DEBIAN_FRONTEND:-}" = noninteractive ] || [ "$attempt" -ge 3 ]; then break; fi
+    db_input critical server-manager/port-error || true
+    db_go || true
+    db_fset server-manager/port seen false
+ done
+
+if [ ! -s /etc/server-manager/manager-https.json ]; then
+    db_input high server-manager/https-port || true
+    db_input high server-manager/https-ip-port || true
+    db_go || true
+fi

@@ -1,0 +1,14 @@
+#!/bin/sh
+set -eu
+case "$1" in
+ remove)
+    if [ -d /run/systemd/system ]; then systemctl daemon-reload || true; fi
+    ;;
+ purge)
+    if [ -f /usr/share/debconf/confmodule ]; then . /usr/share/debconf/confmodule; db_purge; fi
+    deb-systemd-helper purge server-manager-https-renew.timer server-manager.service >/dev/null || true
+    deb-systemd-helper unmask server-manager.service >/dev/null || true
+    # Preserve accounts, database, module settings and user data even on purge.
+    echo 'Server-Manager-Konfiguration und Statusdaten bleiben zur Wiederherstellung erhalten.'
+    ;;
+esac

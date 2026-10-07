@@ -1,0 +1,577 @@
+HOME SERVER MANAGER – CHANGES PER VERSION
+This file is continued with each new DEB version.
+Review since 0.12-18 based on created packages and documented changes.
+
+
+0.12-65 – October 7, 2026
+- Group selection: check or uncheck memberships and apply them together with “Save groups”. The primary group is protected; the administrator password and explicit confirmation for changes to privileged groups are required. Stale group selections are rejected.
+- User administration with individual group changes including sudo; protects memberships omitted from previous selection lists.
+- Separate Linux/SMB password changes, administrator confirmation, explicit approval of privileged groups and stale-form checks.
+- User editor linked from Shares & Users and Manager Users; documented in German and English.
+
+0.12-64 – October 7, 2026
+- English as default without saved browser language selection; separate tab for Settings / Languages. Previously selected German is retained.
+- Alarm card receives a direct button to the alarm page.
+- Descriptions, installation notes, and full version history also available in English within the release. Build check prevents missing/outdated English documentation.
+- Release explicitly includes client language files; Windows remains experimental and was tested under Mono.
+- Client Linux 0.4.5 / Windows 0.2.7: Display language automatically German on a German desktop, otherwise English; independent of Manager language selection and JSON profile. New client packages required. Custom names and technical/external script outputs remain unchanged.
+- German-/English catalog for the entire web interface supplemented, including dialogs and dynamic diagnostic messages.
+- Translation assistant separates display texts from form values, URLs, and technical keys. Technical logs and custom names remain unchanged.
+- Tests for language switching, unchanged actions, placeholders, and complete inclusion of language files in the package.
+
+0.12-63 – October 4, 2026
+- Wake Nextcloud on access: optional gateway installer on the persistent runner, accessible under Manage Apps / DynDNS & Targets & Services.
+- Custom blocker profile download on the Nextcloud server. Transfers begin only after Nextcloud readiness and confirmed client sleep blocker. Blockers are renewed during transfers and configurable keep-awake period; thereafter normal agent interval runs out.
+- Streaming for HTTP/WebDAV; no automatic retry of write requests. Public forwarding, DNS, router, and certificates set up separately. No support for subpath installations or WebSockets; frequent synchronization can keep the server awake.
+- Power & Recovery API under Manage Apps: recognize known legacy installation, update with protected restore snapshot, retain configuration and auto-start. IPMI secret as service credential, limited asynchronous jobs. Installation does not trigger power action.
+- Client overview refers to personal setup instead of multiple download buttons. Display reported hostnames instead of device hashes.
+- Linux client 0.4.4 and Windows client 0.2.6: display hostname and allow change via respective system administration. Existing device binding remains intact. Windows remains experimental.
+
+0.12-62 – October 4, 2026
+- Personal client setup under /clients/setup with login and single valid profile for 15 minutes.
+- Custom sleep blocker per Manager user, computer, and local user identifier. Server MAC and configurable recovery address are inherited in JSON.
+- JSON filename contains username; client name is formed from user and computer name upon activation.
+- Linux client 0.4.3 and Windows client 0.2.5 with red, yellow, and green taskbar icons. Green confirms agent login.
+- Recovery address changed under Settings / Server & Module Paths / Network; new profiles inherit active default.
+- Existing clients updated separately; previous profiles remain intact. Windows remains experimental and was not tested on a real Windows PC.
+
+0.12-61 – October 4, 2026
+- HTTPS system states transfer only new 4-MiB blocks; unchanged blocks are reused per account/profile. No local archive intermediate copy.
+  All source files read again; shifted block boundaries can cause additional transfers. Each completed snapshot remains selectable.
+- System files, programs, package sources, Flatpak/Snap, user homes,
+  desktop, UID/GID, ACLs, services and configuration included; additional
+  local mounts and network profiles optional. Offline source selectable.
+- Software/hardware inventory and capture errors documented in archive.
+- HTTPS restore: system or components in live system; individual
+  files/folders without root to new folder. External validation repository required.
+- Same distribution/version/architecture for system restore required.
+  Target fstab/crypttab remain intact. No automatic partitioning,
+  bootloader installation, cross-platform package migration, or deletion of
+  additional target files. No sector-by-sector image. Running databases/VMs
+  stop beforehand or offline backup. No archive encryption at rest.
+- Cleanup on abort retains blocks from completed snapshots. Account/profile separation,
+  checksums and archive paths are validated. Windows EXE unchanged.
+- Guide: docs/HTTPS_SYSTEM_BACKUP.txt; also included in client package.
+
+79 targeted tests passed; physical system restore not tested on hardware.
+
+0.12-60 – October 4, 2026
+- Release from fixed file list: no development backups,
+  database copies, local configurations, or previous Git history.
+- Additional Git exclusions for secret files and local workspaces.
+- Linux client 0.3.6: HTTPS system backup clearly separated from USB/NFS assistant.
+- Account backups use session tokens for the HTTPS proxy; erroneous
+  request validation no longer generally displayed as expired login.
+- User management, custom account backups, and roles included from 0.12-59.
+  Windows client unchanged. License/copyright notices retained.
+
+0.12-59 – October 3, 2026
+- Explicitly enable existing local Linux users for the manager.
+  Login via PAM with Linux password; independent manager access remains intact.
+- Administrator, User, and Read-only roles with server-side verified module permissions.
+  New and non-approved actions remain locked.
+- Linux Client 0.3.4: Manager login and own backup/restore capabilities.
+  Account storage is separated from previous agent backups; no automatic migration.
+  Existing agent tokens remain independent.
+- Read-only role allows its own restore but not new server storage.
+  Server backups remain reserved for administrators. No password storage in the client;
+  HTTPS and existing JSON profile are required.
+- Permission revocation, account lockout, and session expiration are checked upon requests.
+  Full Linux restore continues to run live on a system with local administrator rights.
+  Windows EXE remains unchanged.
+- PAM dependencies and own PAM service file included in the installation package.
+  SMART detail queries only for actually detected storage devices.
+- Passed 50 targeted tests including TLS login and backup roundtrip;
+  real-world PAM password login of an approved Linux account has not yet been tested live.
+
+0.12-58 – October 3, 2026
+- Manager network access exclusively via HTTPS; HTTP backend only local.
+  DEB setup with HTTPS port selection, private certificate for hostname and IP,
+  verified access, and HTTPS desktop starter. Existing HTTP agents require
+  HTTPS address and certificate trust; no external HTTP fallback on errors.
+- Install full local AI completely: Open WebUI, Ollama, Docker/Compose if needed
+  and Qwen3 0.6B as the starting model. Alternative for existing Ollama remains.
+  New WebUI installations with HTTPS, selectable name/IP/port, and renewal timer.
+  Existing apps are not replaced. CPU operation, GPU setup separately.
+  Updates receive Ollama image variant and model volume. Full fresh
+  AI/HTTPS installation on an empty machine has not yet been practically validated.
+- Directly enable/disable DynDNS addresses and delete with confirmation.
+  Deletion removes manager configuration, not the domain at the provider.
+- First-start assistant for optional modules and their dependencies; existing
+  module selection remains intact. Common DEB continues to include module code.
+- Linux Client 0.3.3: System backup directly via HTTPS to manager without SMB/NFS
+  and without full local intermediate copy; USB target still selectable.
+  Guided restore of complete systems only from live system into a prepared target;
+  file restore separate. Administrator login for server backups, own client backups
+  remain for normal users. Live-USB package loadable in manager. Full hardware
+  restore untested.
+- Desktop integration for client and manager; uninstall via package management.
+- Windows client unchanged; Mint 22.x remains experimental.
+
+0.12-57 – October 1, 2026
+- Linux Client 0.3.0: guided assistant "System Backup & Restore".
+  Back up Home, program lists, package sources, desktop, and supported system components
+  to a Linux-formatted USB drive or configured NFS storage.
+- Full restore only from one Linux live system into an existing Linux base installation;
+  individual file restore remains available.
+- Storage target, file permissions, and incomplete backups are checked;
+  new backups receive their own folders and do not overwrite older snapshots.
+- Portable ZIP with scripts and instructions loaded directly under client agents.
+  No bootable ISO, no credentials in the package; local administrator rights required.
+- Limitations: no partitioning or bootloader installation; user programs
+  and identity matching may require manual follow-up. Full restore on actual target hardware
+  not yet validated. Pause server sleep schedule before NFS backup.
+- Windows client unchanged at 0.2.2; Mint 22.x remains experimental.
+
+0.12-56 – October 1, 2026
+- Linux Client 0.2.6: File backups transferred directly to server without
+  full ZIP intermediate archive on the client system drive.
+- Alternatively backup directly to mounted USB/data drives without server connection.
+  System drive and targets within source are locked; storage reserve
+  and media change checked. Keep ZIP and JSON checksum together.
+- Back up own Home or selected folder; restore entire snapshot or individual
+  relative file/folder path into a new target folder.
+- Server checks streaming segments, storage limit, and final checksum.
+  Incomplete snapshots do not appear as finished backups.
+- Server restore from ZIP still requires temporary storage; reserve checked before and
+  during download. USB Restore reads directly.
+- Limitations: file backup only, no system image. Full V20 system restore
+  not yet integrated. Windows client remains unchanged at 0.2.2.
+- Debian 13 regular, Mint 22.x still experimental.
+
+0.12-55 – September 30, 2026
+- Private HTTPS access simultaneously via hostname and fixed server IP.
+  IP access is optional on a custom port (default 8443), with the IP in the certificate,
+  using the same login and network protection settings. Configurable under HTTPS Access.
+- Existing websites on the domain port remain intact; trust root certificates
+  on clients; adjust server IP setting if changed.
+- Linux client 0.2.4: Version visible in window title and at top of window.
+- HTTPS setup accepts matching existing hosts entries unchanged;
+  mismatched mappings remain protected and block setup.
+- JSON profiles inherit the server MAC from the configured LAN/Bridge
+  interface; manual specification possible under Server & Module Paths / Network.
+- Recovery remains primary; without recovery, Wake-on-LAN is chosen if a valid MAC exists.
+  WoL support and hardware/OS configuration required.
+- Windows client remains at 0.2.2 with existing version display and MAC import.
+  Debian 13 standard; Mint 22.x and Windows client remain experimental.
+
+0.12-54 – September 30, 2026
+- Private HTTPS access with own root certificate authority, configurable name,
+  port, and access networks. Initial setup uses the short hostname.
+- Name changeable later in settings; existing names preserved during updates;
+  adjust DNS/hosts entries and client profiles accordingly.
+- Apache, OpenSSL, and Certbot as package dependencies; new installations
+  set up private HTTPS access if validation succeeds. HTTP remains for transition/setup.
+  Public domain optional later.
+- Private certificate renewal timer, also for short names; validated proxy headers,
+  secure HTTPS session cookies, and restore on configuration errors.
+- Client DEB and Windows EXE 0.2.2: back up own folders and restore to new folder;
+  checksums, separate storage per client profile, and memory limit.
+- Backup target with UUID validation, sleep protection, and integration into external backup.
+- Server backups only available after re-login as Manager Administrator.
+- Client assistant for CA fingerprint, certificate import, optional name resolution,
+  and validated HTTPS access; system-wide changes require administrator confirmation.
+- Client file backups do not replace system images; ACLs, links, registry, and
+  full system state are not transferred. Windows remains experimental;
+  UAC and certificate store have not yet been tested under real Windows.
+- Debian 13 standard; Mint 22.x remains experimental. No private server data or credentials in package;
+  version, info display, and documentation unified.
+
+0.12-53 – September 30, 2026
+- Client agents: Linux desktop DEB 0.1.2 with settings, status icon,
+  user auto-start, and controlled takeover of existing script clients.
+- Windows client 0.1.0 as EXE: profile import, heartbeat, server need/release,
+  Wake-on-LAN, and recovery; installation and auto-start for the user.
+  Windows version experimental: protocol and interface checked under Mono;
+  Windows startup, DPAPI, start menu, and auto-start not yet live tested.
+- DEB and EXE downloaded directly under Client Agents; separate personal
+  JSON profiles. EXE download validates included SHA256 checksum.
+- Client guide collapsible, with DEB/EXE/shell setup and explanation of mode transfer:
+  the client reports its mode and need regularly.
+- Fixed error opening Client Agents page due to incorrect IP field.
+- KVM: export disabled VM system disk as RAW or QCOW2 for Rescuezilla;
+  image comparison and download on job and at VM. No bootable ISO and no
+  multi-disk/TPM/NVRAM full backup.
+- Package version, info display, and documentation unified to 0.12-53.
+- Debian 13 standard; Mint 22.x remains experimental.
+
+0.12-52 – September 30, 2026
+- Update manager: fixed error opening on Mint with older Flask.
+- Upload limits work per request even before Flask 3.1; applies also to download uploads and KVM backup uploads;
+  global limits remain intact.
+- Regression tests check update page, size limit, and request separation.
+- First installation of this fix on affected Mint systems directly via DEB,
+  since the previous web updater cannot be opened.
+- Linux Mint remains experimental; no live installation within build scope.
+
+0.12-51 – September 29, 2026
+- KVM: Select ISO and disk files from freely selectable server folders.
+- Recognize Rescuezilla backups and provision them in a new VM for restoration:
+  boot ISO, empty target disk, and read-only backup copy. Restoration occurs
+  within Rescuezilla, not automatically by the manager.
+- Separate steps for source backup, boot ISO, and target. Target storage per
+  VM is selectable; integrity check on the selected drive protects existing targets.
+- Pre-select Rescuezilla source folder and optional boot ISO in settings.
+- Clear name validation preserves inputs even when creation errors occur.
+- KVM installer includes squashfs-tools. Backup medium can be unmounted after restore;
+  the additional copy remains retained on the server.
+- Limitations: single hard drive with 512-byte sectors and matching partition
+  metadata; no shrinking allowed. Target size plus backup, ISO, and reserve must be free.
+  Bootability after hardware change is not guaranteed.
+- Debian tested; Linux Mint remains experimental and unverified in live mode.
+
+0.12-50 – September 29, 2026
+- Experimental Debian phase concluded following confirmed update operation.
+  Debian 13 is now maintained as a regular release; info and package metadata no longer show an experimental indicator.
+- Linux Mint 22.x remains separately marked as experimental.
+- Release build and GitHub draft distinguish platform statuses.
+- Already published packages and backup snapshot 0.12-47 remain unchanged.
+
+0.12-49 – September 29, 2026
+- Version numbers resumed without the 'platform' suffix: 0.12-49.
+- Separate packages for Debian 13 and Linux Mint 22.x with Debian/Mint in filenames
+  and info display; experimental status remains a separate indicator.
+- Includes current driver tab; driver cards appear exclusively there.
+- Version 0.12-47 remains unchanged backup snapshot. Earlier packages remain unaltered.
+  This release does not lift the experimental classification.
+
+0.12-48~platform5 – September 29, 2026
+- Driver cards removed from My Apps; Digital Devices and NVIDIA appear exclusively in Applications / Drivers tab.
+- Unneeded hide buttons removed. Digital Devices access now named Version & Updates. Drivers and services remain unchanged.
+- Still experimental; backup snapshot 0.12-47 remains unaltered.
+
+0.12-48~platform4 – September 29, 2026
+- Applications: New Drivers tab consolidates management of Digital Devices and NVIDIA with hardware, version, installation, and update access.
+- Both driver cards can be individually hidden from My Apps and re-enabled in the Drivers tab. Visibility is permanently saved.
+- Hiding does not affect drivers, services, or hardware settings.
+- Still experimental status for Debian 13 and Linux Mint 22.x.
+  Version 0.12-47 remains as unchanged backup snapshot.
+
+0.12-48~platform3 – September 29, 2026
+- Error handling for app jobs with plan=null corrected.
+- APT signature errors in KVM installer now clearly categorized.
+- Security checks remain active; package sources are not automatically changed.
+
+0.12-48~platform2 – September 29, 2026
+- KVM Installer: remaining Debian-only check replaced by Debian/Mint profile.
+- LAN text input replaced with visible dropdown showing MAC, IP, type, and status.
+- Explicit selection in automatic mode considered; missing/disappeared interfaces clearly reported. NAT as default without host LAN change.
+- Portable installer enhanced with platform check; APT without package removals.
+
+0.12-48~platform1 – September 29, 2026
+- Experimental platform branch from unchanged Debian baseline 0.12-47.
+- Separate package profiles debian13 and mint22 with strict OS validation.
+- Reject incorrect or unknown platforms before installation; web upload also checks package profile. Pre-install check via install_deb.sh --check.
+- Mint base package for Python 3.12; automatic sleep/RTC actions disabled.
+- Debian driver installer remains blocked on Mint; VM/hardware release open.
+
+0.12-47 – September 29, 2026
+- Application and app load time management corrected: Driver cards no longer start synchronous APT, DKMS, or NVIDIA diagnostic programs.
+- Loaded driver version remains visible; full checks occur only upon opening respective driver administration.
+
+0.12-46 – September 29, 2026
+- Digital Devices app card with hardware, version, and DKMS overview.
+- Explicit manufacturer check plus confirmed installation, update to verified baseline 0.9.41, and rebuild of existing sources for current kernel.
+- Two dvb-core modes, Secure Boot protection, fixed download checksums, and persistent jobs via existing package management.
+- No automatic module unloading, Tvheadend interruption, or firmware changes.
+  Activation separately via scheduled restart. Newer drivers displayed first.
+
+- NVIDIA app card with GPU, module, package, and DKMS versions.
+- Hardware check using nvidia-detect, Debian package installation, update, repair with concrete preview, and repackage plan verification.
+- GPU compute processes, unclear Secure Boot status, and foreign driver families block driver changes. No automatic downgrades or restarts.
+
+0.12-45 – September 29, 2026
+- Info access moved to the top right directly under the hostname; previous info card and submenu entry under Settings removed.
+- The info page now displays GPL-3.0-or-later along with expandable license texts and third-party software notes. Existing direct links remain accessible.
+
+0.12-44 – September 29, 2026
+- Project license is now GPL-3.0-or-later including the full license text and release approval notice.
+- README, Debian copyright, and release manifest include licensing information.
+- License files are included in DEB, ZIP, source archive, and individual assets.
+- Makeself notes and GPL-2.0-or-later remain preserved; optional apps and system dependencies retain their own licenses.
+
+0.12-43 – September 29, 2026
+- Release Notes now include the entire existing version history from 0.12-18 instead of only changes to the latest version.
+- Feature overview explicitly assigns additions 0.12-40, 0.12-41, and 0.12-42 to their respective versions and describes the current state.
+- Release build additionally checks a section for the current version in the feature overview. Previous release packages remain unchanged.
+
+0.12-42 – September 29, 2026
+- Complete release packages with installer add-on modes and instructions.
+- Automated release build includes version comparison, explicit source file list, privacy patterns, checksums, and protection against overwriting old releases.
+- GitHub workflow checks two builds and creates a release draft.
+- Ongoing server installation is not altered by creating the files.
+
+0.12-41 – September 29, 2026
+- Online detection now verifies MAC address assignment in the configured LAN after IPv4 ping; a response no longer marks all devices with the same IP as online.
+- Mismatched MAC addresses invalidate old IPv4 assignments; missing or ambiguous proofs do not update successful device contacts.
+- Device overview explains multiple stored IPs and unconfirmed assignments. Devices, names, and settings are not automatically merged or deleted.
+- Client agents remain excluded from IP probing.
+
+0.12-40 – September 29, 2026
+- Internal function names and current documentation switched to neutral manager names; web addresses and client API addresses remain unchanged.
+- New Samba configuration files receive the prefix server-manager-.
+- Old database paths and compatibility links are migrated separately with backup. The package does not perform automatic cleanup of existing data.
+
+0.12-39 – September 28, 2026
+- Rejected uninstallations display a clearly visible error card stating "Uninstallation not started" and provide a direct link back to the current preview.
+- Expired or already sent previews, changed installation status, and missing confirmation are explained separately.
+- Deletion scope and protection checks remain unchanged. The update does not start an uninstallation and deletes no app data.
+
+0.12-38 – September 28, 2026
+- Package errors from version 0.12-37 fixed: the module for permanently removing app data is now included; deletion preview no longer causes an internal server error due to a missing Python file.
+- DEB build now checks static local Python imports against the package list and aborts if a required source module would not be included in the package.
+- Scope and confirmations of the delete function remain unchanged. The manager update itself does not delete apps or app data.
+
+0.12-37 – September 28, 2026
+- DynDNS: Analysis and repair per provider with IP comparison, DNS zone, and authoritative A/AAAA records; TCP is attempted if UDP fails.
+- DNS check errors do not create new provider wait times; a successful diagnosis can clear old DNS error displays while existing wait times and provider blocks remain. Diagnosis does not send an update to the provider.
+- Apps: Additional option for permanently removing the app and its data requires deletion preview, confirmation, and entry of the app ID.
+- Available for single-container apps installed uniquely by the manager, such as Jellyfin; entire displayed app directory is deleted including stored media. No automatic restore available.
+- External read-only mounted media, existing backups, manager logs, and shared dependencies remain preserved. Own container networks and exclusively used images are removed.
+- Foreign installations, additional Docker volumes, mount points, and shared or external writable data paths block permanent deletion; other installation types still require their own delete profile.
+- Previous uninstallation with retained data and reinstallation remains available; if the final removal is aborted, data may already be deleted as explicitly indicated by the job.
+
+0.12-36 – September 28, 2026
+- Pi-hole Export: Only lists are recommended as the default. The ZIP file contains lists,
+  domain rules, groups, and clients, but not web ports, passwords,
+  DNS/DHCP configuration, or DHCP leases. Groups and clients may still contain
+  device-specific information.
+- Full Teleporter export is expandable separately and only after explicit confirmation.
+  Note possible changes to access and network upon import.
+- New managed Pi-hole containers receive FTLCONF_webserver_port=80 matching the internal Docker port assignment. The external web port remains freely selectable.
+- Existing managed containers: Prepare web port protection under Network & Access
+  and activate after verification. Configuration is backed up beforehand;
+  a brief container restart is required. Regular network changes also set the internal web port protection.
+- Updating only the Manager does not change existing Pi-hole configuration.
+  Existing containers must explicitly enable web port protection once.
+
+0.12-35 – September 28, 2026
+- Pi-hole: Export settings and lists as a Teleporter ZIP file and import them.
+  Import preview with separate options for Lists/Groups/Clients, Configuration,
+  and DHCP leases; initially only select lists. A Pi-hole v6 ZIP is required.
+- Create a Teleporter restore backup before every import; display last import jobs
+  and restore download backups. No automatic synchronization.
+- Optional text lists for FRITZ!Box: export activated precise allowed or blocked domains,
+  maximum 500 without silent truncation. Manual transfer to FRITZ!Box filter lists;
+  no direct router access. Text lists can additionally be imported into Pi-hole.
+  Regex, subscriptions, and group rules are not transferred equivalently. FRITZ!Box allowlists have different effects.
+- Check archive size, paths, checksums, and domain format before import.
+  Configuration imports may change Access, DNS, and DHCP; partial changes possible in case of errors.
+  Previous backup remains intact; no automatic rollback. Long-term request history is not included in the Teleporter.
+- Pi-hole section renamed under Network & Access to match password management.
+- Tests and interface verified; no actual import performed on a production Pi-hole.
+  Check backup and scope before transferring to other devices.
+
+0.12-34 – September 28, 2026
+- Pi-hole: Native installation as an alternative to Docker under Manage Apps.
+  LAN IP, web port, upstream DNS, and admin password are requested.
+  Official installer supplements dependencies; existing installations and occupied DNS ports block new installation. No automatic migration.
+- Existing Pi-hole: Change network address and web port with preview.
+  Manager Docker: Web and DNS port binding; native v6: first IPv4 HTTP listener.
+  Additional native web listeners and DNS configuration remain intact.
+- Independent admin password change with repetition and confirmation.
+  Network and ports remain unchanged during this process; brief service restart required.
+- Protect configuration before changes and reset on execution errors.
+  Passwords are not displayed in the preview or job log.
+- Limitations: No automatic conversion of foreign Docker configurations;
+  Router, DHCP, and client DNS are not changed. For native installation,
+  check partial installations after errors. Native reinstallation was not practically run
+  on an empty target server; inputs and data protection as well as network changes/rollback were checked in isolation.
+
+0.12-33 – September 28, 2026
+- External Backup: Select backup folder and local SMB/NFS share data;
+  overlapping sources are copied only once. Photo lab restores group together.
+- Determine total size and additional incremental space requirement; summarize long source lists.
+  Recheck size values after selection changes.
+- Restore: select completed external status and contained folders,
+  verify target, and confirmed copy back into a new dated folder.
+  Existing files remain intact. App/VM recovery occurs subsequently in the respective module;
+  no bootable system image and no automatic activation of copied shares. Linux UID/GID are preserved.
+- Display actual daily backups instead of outdated monitoring paths;
+  do not continue to display old error messages after successful backup chain.
+- Recognize SQL backups uncompressed and as gzip; maintain age rating.
+- Remove optional manual script area from the backup overview.
+  Clearly name file integrity test and do not offer for folder statuses.
+- Home Assistant guide and YAML download for a separate Power/Recovery API.
+  Provide optional service installer: query IPMI access, allowed clients,
+  service address and port. Existing foreign installation remains protected.
+  Remote IPMI hardware required; use API only in secured LAN/VPN.
+  Installation does not trigger power action; hard reset is disabled by default.
+
+0.12-32 – September 27, 2026
+- Nextcloud inventory is detected at standard paths and via web server/Docker.
+- Local/VPN installation without a public domain; the domain and HTTPS are added later for local installations set up by the manager.
+- View redirects, add, change, disable, enable, and remove them; protected shutdown with HTTP 410. Expand overview if needed.
+- DynDNS targets more compact; configure new reverse proxies or browser redirects with target address and port. DNS and router are not automatically changed.
+- Managed VMs prepared approximately five minutes before the scheduled host shutdown is due.
+  Manually shut down regularly in the manager immediately; if a VM shutdown does not occur within five minutes, the host remains on. No forced VM power-off.
+- Report VM errors via selectable ntfy alarm source; missing KVM generates no alarm.
+- External full backup of existing backup folders: UUID target selection, mount,
+  incremental copies with hardlinks, dated snapshots, space and content verification.
+  Older snapshots remain preserved. Background service survives web service restarts.
+- External copy includes existing backups, not a new system image.
+  Linux file system required; do not change source folder during copying.
+- rsync added as package dependency for external backup.
+- Remaining personal example and fallback paths neutralized.
+  Immich Compose restore uses /opt appropriate to the backup source.
+
+0.12-31 – September 27, 2026
+- Update checks directly accessible for all selectable apps and Docker.
+- Missing registry check for dynamic container apps like Jellyfin and Plex added; platform and configured tag or digest considered.
+- Compare SMB/NFS and Docker packages against local APT candidates.
+- No false claim of currency if manager release source is missing.
+- Treat network errors and missing installations separately from currency.
+- Existing app-specific checks remain preserved.
+
+0.12-30 – September 27, 2026
+- Missing installer security token in Docker management added.
+- Fixes "form expired" during installation/addition, service start,
+  and uninstallation. Protection against invalid forms remains preserved.
+- Form check tested with actual installer verification mechanism.
+
+0.12-29 – September 27, 2026
+- Docker Engine & Compose management integrated under Apps: install,
+  add compose, start stopped service or protected uninstall.
+- Full Docker installation detected and install button grayed out.
+  Unclear state locks installation. Container installer links to Docker management.
+- Uninstall preserves data and locks on containers or active swarm.
+- APT full-upgrade with preceding simulation and confirmation added.
+  Preview remains a snapshot; package removals are possible.
+- App execution permissions clearly visible and dynamically updated.
+- ComfyUI update and Stable management merged under shared access.
+- Backup storage verified via stable file system UUID. Old configuration
+  without UUID must be saved again after verifying the target folder.
+- Certificate test without random wait time; renewal schedule and due date explained.
+
+0.12-28 – September 26, 2026
+- OpenIPMI added as optional service in server overview, with note on required hardware and separate control of operation and auto-start.
+  No automatic activation of the service.
+- Desktop service table with fixed columns and compact action groups.
+  DynDNS and OpenIPMI explanations expandable; narrow views scrollable.
+- Application card description expanded to include updates, backup, and restore,
+  including English translation.
+
+0.12-27 – September 26, 2026
+- Scanner access now called "Scanner API for Home Assistant", also in English.
+- Home-Assistant guide expanded with concrete steps for configuration.yaml,
+  existing sections and !include files.
+- Notes on server address, API port, config check, restart,
+  test scan, and completion of multi-page scans added. YAML remains downloadable.
+
+0.12-26 – September 26, 2026
+- Scanner installer creates default service account scanner if needed.
+- Change scan output folder afterwards; select service user and access group.
+- Preserve folder permissions or set access only for the service user or additionally
+  read/write for a group. Display existing folder permissions.
+- New rights affect target folder and future scans. Existing files
+  are not moved or recursively re-permissioned; additional ACLs remain protected.
+- Newly created parent folders of scan output folder are traversable.
+  Errors due to missing access rights explained more clearly.
+- DEB updater detects manual or incomplete installations before upload.
+  A manual installation is not automatically converted into a DEB installation.
+- Version changes included for the first time as separate text file in package and download.
+
+0.12-25 – September 26, 2026
+- KVM without detectable local installation causes no false sleep blocker.
+- Running KVM jobs and disrupted detected installations remain protected.
+- Under manager update only the last two updates are displayed.
+  Older logs remain stored.
+
+0.12-24 – September 26, 2026
+- Cleans up outdated Python program cache during package installation.
+- Corrects incorrect version displays despite a newer package being installed.
+- The updated updater checks the running version after installation.
+
+0.12-23 – September 26, 2026
+- Added author note under the version number on the Info page.
+- Unified source version and package version in the release run.
+
+0.12-22 – September 26, 2026
+- New VM archives and downloads now include VM name, date, time, and job number.
+- Existing backups with older file names remain downloadable.
+- Feature overview included for the first time in the DEB package and aligned to the version.
+
+0.12-21 – September 26, 2026
+- DynDNS target overview with detected local Apache targets and redirects.
+- Descriptive mapping of hostnames to applications, target servers, and ports.
+- DNS and TLS check at the push of a button; mappings do not change connections.
+
+0.12-20 – September 26, 2026
+- Downloads for completed VM backups are now placed directly between backup creation and upload/restore.
+
+0.12-19 – September 26, 2026
+- Empty libvirt-backingStore entries no longer prevent VM backups.
+- Real dependent disk chains continue to be rejected.
+
+0.12-18 – September 26, 2026
+- Optional home network and TV module; missing TV installation correctly considered.
+- DynDNS and virtual machines as their own main areas.
+- Account display as a drop-down menu in the main bar.
+- Start VM backup directly on the Backup/Restore page.
+- Note about default login credentials if the installation password is unchanged.
+- Port check briefly accounts for lingering closed connections.
+
+Note: The version number refers to the respective package content.
+Creation or deployment does not mean automatic installation.
+
+CLIENT 0.3.4 – USER LOGIN (October 3, 2026)
+- In the client choose "Log in to Manager / Own Backups".
+- Administrator: Settings → Manager User → release Linux account,
+  select Role User and scope Own Client Backups.
+- Login with Linux password via validated HTTPS. Password and session
+  are not stored on disk; must log in again after restart.
+- Users may start their own backups and restore them.
+  Read-only permission allows restoring existing personal backups only.
+- Account backups are separated from legacy agent backups. Old snapshots
+  remain accessible within the current profile; do not share profiles between users.
+- Server backups reserved for administrators. Revocation of rights or session expiry ends access;
+  no automatic fallback to tokens occurs.
+- The existing JSON profile continues to be required for server address, HTTPS,
+  and agent functions. USB backups remain possible offline.
+- Complete Linux system restore remains only in live system;
+  normal users thus gain no local administrator rights.
+- This extension applies to the Linux DEB; Windows EXE unchanged.
+
+Client 0.3.5 – HTTPS Proxy Fix (October 3, 2026)
+- Account backup requests use the session token instead of an
+  HTTPS origin comparison with the internal HTTP backend.
+- Expiration, missing permissions, and request validation are explained separately.
+- Update both server extension and Client 0.3.5 together.
+
+Client 0.3.6 – Distinguish Backup Paths (October 3, 2026)
+- Direct HTTPS system backup listed first; no folder selection.
+- USB/NFS assistant explicitly labeled and explained before start.
+- HTTPS protocol indicates the selected transfer path.
+
+
+Development status as of October 4, 2026 – Linking users and devices
+- Linux Client 0.4.1 and Windows Client 0.2.3: own token and own sleep blocker per Manager user, device, and local user identity.
+- Import JSON profile, set up HTTPS, log in to the manager, and select link user & device. Linux: in Own Client Backups dialog; Windows: directly in settings. Releasing Own Clients & Backups requires Role User or Administrator. Read-only permission cannot link.
+- A single user on multiple PCs and multiple users on a PC can independently report their need. Release only affects the own entry.
+- Server MAC is exported in JSON and taken over during linking. If both recovery address and server MAC exist, both wake-up paths are available in JSON.
+- Device identification is derived locally from machine-id (Linux) or MachineGuid (Windows); local user identity from UID or SID. The MAC is only supplementary information. A changed system/user account may require relinking if necessary.
+- New tokens are bound to these identities; copied profiles do not automatically fit other PCs/accounts. No hardware-based proof of identity: token and system access continue to be protected; identities can be mimicked.
+- Account lockout, permission/password change, or disabled agent prevents further reports. Outdated needs expire according to existing heartbeat timeout.
+- Old profiles remain visible as Unlinked (Altprofile) and function unchanged. After transitioning all users, disable the shared Altprofile together. Existing backup repositories are not moved; manager account backups remain independent of device linking. Manager logout ends only the web/backup session; disabling agent separately shuts down via agent.
+- Windows build and transport tested; native Windows login/Registry SID and the interface have not yet been tested on an actual Windows PC.
+
+
+Development status as of October 4, 2026 – Personal client setup
+- After logging in to manager under https://SERVER:HTTPS-PORT/clients/setup download Linux DEB, Windows EXE and own setup profile.
+- Releasing Own Clients & Backups and Role User/Administrator required. No view of foreign profiles or tokens. Read-only can download programs but cannot set up new device linking.
+- Profile contains server address, server MAC, possibly private certificate information and a 15-minute valid one-time code. On the server only its hash is stored.
+- Linux 0.4.2 / Windows 0.2.4: import profile, save, optionally set up private HTTPS after fingerprint verification; activating agent exchanges the code via verified HTTPS for own user-device token. No password storage.
+- Each new profile replaces earlier unused codes of same account. Upon expiration, lost response or failed local storage fetch new profile. Permission change/account lockout also prevents redemption of existing codes.
+- Start mode Start without server then select manually. Root certificate and hosts entry continue to be changed only upon explicit confirmation. Backup login remains separate; personal setup grants no server backup rights. Windows remains experimental, native Windows verification pending.
+
+Development status as of October 4, 2026 – Client Linux 0.4.3 / Windows 0.2.5:
+New taskbar icons: Red = no confirmed agent connection, Yellow = establishing connection, Green = login confirmed. Existing profiles and heartbeat logic remain intact. Install new client version and restart. Windows execution remains experimental.
+
+Development status as of October 4, 2026 – Linux Client 0.4.4 / Windows Client 0.2.6
+Display hostname in client and change via operating system functions. Administrator release required; Windows may require restart. Other DNS/release references are not changed. Next heartbeat updates hostname in manager, user-device linking remains intact. Linux: activate agent / take over updates heartbeat after package update. Windows remains experimental.
+
+Development status as of October 4, 2026 – Power & Recovery API v2.2
+Manage Apps: local installation, status, configuration, and updates. Existing API v2.1-stable and Manager version 1.0/2.2 are recognized; unknown inventory remains unchanged. Import takes over configuration and password without executing the old code. Protected restore and recovery in case of startup errors. Running Recovery jobs lock updates. Installer ZIP for other long-running services remains available.
+Service runs without root using systemd credentials and source IP releases. Recovery is asynchronous; 202 means accepted, check status for result. Soft/Reset optional, previous selection visible during migration. Direct /soft, /reset, /cycle endpoints removed. LAN/VPN only, no public port release. No Nextcloud wake proxy; installation changes neither DNS nor router and does not shut down target server.
+
+Language setting (development status as of October 7, 2026): English without saved browser language selection. Settings / Languages offers German and English; existing selection remains intact.

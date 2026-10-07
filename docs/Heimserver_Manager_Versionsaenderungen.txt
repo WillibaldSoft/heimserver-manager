@@ -1,0 +1,666 @@
+HEIMSERVER MANAGER – ÄNDERUNGEN PRO VERSION
+Diese Datei wird bei jeder neuen DEB-Version fortgeführt.
+Rückblick ab 0.12-18 anhand der erstellten Pakete und dokumentierten Änderungen.
+
+
+0.12-65 – 7. Oktober 2026
+- Gruppenauswahl: Mitgliedschaften per Häkchen hinzufügen oder entfernen und gemeinsam mit „Gruppen speichern“ übernehmen. Primäre Gruppe geschützt; Administratorpasswort und bei geänderten besonderen Rechten ausdrückliche Bestätigung erforderlich. Veraltete Gruppenauswahl wird abgelehnt.
+- Benutzerverwaltung mit gezielten Gruppenänderungen einschließlich sudo; Schutz gegen Entfernen nicht angezeigter Mitgliedschaften.
+- Getrennte Linux-/SMB-Passwortänderung, Administratorbestätigung, explizite Zustimmung zu privilegierten Gruppen und Prüfung veralteter Formulare.
+- Benutzer-Bearbeitungsseite aus Freigaben & Benutzer und Manager-Benutzern erreichbar; Deutsch/Englisch dokumentiert.
+
+0.12-64 – 7. Oktober 2026
+- Englisch als Standard ohne gespeicherte Browserwahl; eigener Reiter Einstellungen / Sprachen. Bereits gewähltes Deutsch bleibt erhalten.
+- Alarmkarte erhält einen direkten Button zur Alarmseite.
+- Beschreibungen, Installationshinweise und vollständige Versionshistorie auch auf Englisch im Release. Buildprüfung verhindert fehlende/veraltete englische Dokumentation.
+- Veröffentlichung enthält die Client-Sprachdateien ausdrücklich; Windows bleibt experimentell und wurde unter Mono geprüft.
+- Client Linux 0.4.5 / Windows 0.2.7: Anzeigesprache automatisch Deutsch bei deutschem Desktop, sonst Englisch; unabhängig von Manager-Sprachauswahl und JSON-Profil. Neue Client-Pakete erforderlich. Eigene Namen und technische/externe Skriptausgaben bleiben unverändert.
+- Deutsch-/Englisch-Katalog für die gesamte Weboberfläche ergänzt, einschließlich Dialogen und dynamischer Diagnosemeldungen.
+- Übersetzungshelfer trennen Anzeigetexte von Formwerten, URLs und technischen Schlüsseln. Technische Protokolle und eigene Namen bleiben unverändert.
+- Tests für Sprachwechsel, unveränderte Aktionen, Platzhalter und vollständige Aufnahme der Sprachdateien ins Paket.
+
+0.12-63 – 4. Oktober 2026
+- Nextcloud bei Zugriff wecken: optionaler Gateway-Installer auf dem Dauerläufer, erreichbar unter Apps verwalten und DynDNS / Ziele & Dienste.
+- Eigener Blocker-Profil-Download auf dem Nextcloud-Server. Übertragungen beginnen erst nach Nextcloud-Bereitschaft und bestätigtem Client-Schlafblocker. Blocker werden während Übertragungen und einstellbarer Nachlaufzeit erneuert; danach läuft die normale Agentenfrist aus.
+- Streaming für HTTP/WebDAV; keine automatische Wiederholung von Schreibanfragen. Öffentliche Weiterleitung, DNS, Router und Zertifikate werden separat eingerichtet. Keine Unterstützung für Unterpfadinstallationen oder WebSockets; häufige Synchronisation kann den Server wach halten.
+- Power & Recovery API unter Apps verwalten: bekannte Altinstallation erkennen, mit geschützter Rücksicherung aktualisieren, Konfiguration und Autostart erhalten. IPMI-Geheimnis als Dienst-Credential, begrenzte asynchrone Aufträge. Installation löst keine Power-Aktion aus.
+- Client-Übersicht verweist auf die persönliche Einrichtung statt mehrfacher Downloadbuttons. Gemeldete Hostnamen statt Geräte-Hash anzeigen.
+- Linux-Client 0.4.4 und Windows-Client 0.2.6: Hostname anzeigen und Änderung über die jeweilige Systemverwaltung ermöglichen. Bestehende Gerätebindung bleibt erhalten. Windows bleibt experimentell.
+
+0.12-62 – 4. Oktober 2026
+- Persönliche Client-Einrichtung unter /clients/setup mit Anmeldung und einmaligem, 15 Minuten gültigem Profil.
+- Eigener Schlafblocker pro Manager-Benutzer, Rechner und lokaler Benutzerkennung. Server-MAC und einstellbare Recovery-Adresse werden im JSON übernommen.
+- JSON-Dateiname enthält den Benutzernamen; Client-Name wird bei Aktivierung aus Benutzer und Rechnername gebildet.
+- Linux-Client 0.4.3 und Windows-Client 0.2.5 mit roten, gelben und grünen Taskleistensymbolen. Grün bestätigt die Agenten-Anmeldung.
+- Recovery-Adresse unter Einstellungen / Server & Modulpfade / Netzwerk ändern; neue Profile übernehmen die aktive Vorgabe.
+- Vorhandene Clients separat aktualisieren; bisherige Profile bleiben erhalten. Windows bleibt experimentell und ist nicht auf einem echten Windows-PC geprüft.
+
+0.12-61 – 4. Oktober 2026
+- HTTPS-Systemstände übertragen nur neue 4-MiB-Blöcke; unveränderte Blöcke
+  werden pro Konto/Profil wiederverwendet. Keine lokale Archiv-Zwischenkopie.
+  Alle Quelldateien werden erneut gelesen; verschobene Blockgrenzen können
+  zusätzliche Übertragung verursachen. Jeder fertige Stand bleibt auswählbar.
+- Systemdateien, Programme, Paketquellen, Flatpak/Snap, Benutzer-Homes,
+  Desktop, UID/GID, ACLs, Dienste und Konfiguration enthalten; zusätzliche
+  lokale Mounts und Netzwerkprofile optional. Offline-Quelle auswählbar.
+- Software-/Hardwareinventar und Erfassungsfehler im Archiv dokumentiert.
+- HTTPS-Rücksicherung: System oder Komponenten im Live-System; einzelne
+  Dateien/Ordner ohne Root in neuen Ordner. Externe Prüfablage erforderlich.
+- Gleiche Distribution/Version/Architektur für Systemrestore erforderlich.
+  Ziel-fstab/crypttab bleiben erhalten. Keine automatische Partitionierung,
+  Bootloaderinstallation, plattformübergreifende Paketmigration oder Löschung
+  zusätzlicher Zieldateien. Kein sektorweises Abbild. Laufende Datenbanken/VMs
+  vorher stoppen oder offline sichern. Keine Archivverschlüsselung im Ruhezustand.
+- Abbruchbereinigung erhält Blöcke fertiger Stände. Konto-/Profiltrennung,
+  Prüfsummen und Archivpfade werden geprüft. Windows-EXE unverändert.
+- Anleitung: docs/HTTPS_SYSTEM_BACKUP.txt; auch im Clientpaket enthalten.
+
+79 gezielte Tests bestanden; physische Systemrücksicherung nicht an Hardware getestet.
+
+0.12-60 – 4. Oktober 2026
+- Veröffentlichung aus fester Dateiliste: keine Entwicklungs-Sicherungen,
+  Datenbankkopien, lokalen Konfigurationen oder bisherige Git-Historie.
+- Zusätzliche Git-Ausschlüsse für Geheimnisdateien und lokale Arbeitsablagen.
+- Linux-Client 0.3.6: HTTPS-Systemsicherung klar vom USB/NFS-Assistenten getrennt.
+- Konto-Sicherungen nutzen Sitzungstoken für den HTTPS-Proxy; fehlerhafte
+  Anfrageprüfung wird nicht mehr pauschal als abgelaufene Anmeldung angezeigt.
+- Benutzerverwaltung, eigene Konto-Sicherungen und Rollen aus 0.12-59 enthalten.
+  Windows-Client unverändert. Lizenz-/Copyrightangaben bleiben erhalten.
+
+0.12-59 – 3. Oktober 2026
+- Vorhandene lokale Linux-Benutzer gezielt für den Manager freischalten.
+  Anmeldung über PAM mit Linux-Passwort; eigenständiger Manager-Zugang bleibt.
+- Rollen Administrator, Benutzer und Nur Lesen mit serverseitig geprüften
+  Modulrechten. Neue und nicht freigegebene Aktionen bleiben gesperrt.
+- Linux-Client 0.3.4: Manager-Anmeldung und eigene Sicherung/Rücksicherung.
+  Kontoablagen sind von bisherigen Agenten-Sicherungen getrennt; keine
+  automatische Migration. Bestehende Agenten-Tokens bleiben unabhängig.
+- Nur Lesen erlaubt eigene Rücksicherung, aber keine neue Serverspeicherung.
+  Server-Backups bleiben Administratoren vorbehalten. Keine Passwortspeicherung
+  im Client; HTTPS und bestehendes JSON-Profil erforderlich.
+- Rechteentzug, Kontosperre und Sitzungsablauf werden bei Anfragen geprüft.
+  Vollständige Linux-Rücksicherung weiterhin im Live-System mit lokalen
+  Administratorrechten. Windows-EXE bleibt unverändert.
+- PAM-Abhängigkeiten und eigene PAM-Dienstdatei im Installationspaket.
+  SMART-Detailabfragen nur für tatsächlich erkannte Datenträger.
+- 50 gezielte Tests einschließlich TLS-Anmeldung und Backup-Roundtrip bestanden;
+  reale PAM-Passwortanmeldung eines freigegebenen Linux-Kontos noch nicht live getestet.
+
+0.12-58 – 3. Oktober 2026
+- Manager-Netzwerkzugang ausschließlich über HTTPS; HTTP-Backend nur lokal.
+  DEB-Einrichtung mit HTTPS-Portwahl, privatem Zertifikat für Rechnername und IP,
+  überprüftem Zugang und HTTPS-Desktop-Starter. Vorhandene HTTP-Agenten benötigen
+  HTTPS-Adresse und Zertifikatvertrauen; kein externer HTTP-Ersatzzugang bei Fehlern.
+- Lokale KI komplett installieren: Open WebUI, Ollama, Docker/Compose bei Bedarf
+  und Qwen3 0.6B als Startmodell. Alternative für vorhandenes Ollama bleibt.
+  Neue WebUI-Installationen mit HTTPS, wählbarem Namen/IP/Port und Erneuerungstimer.
+  Bestehende Apps werden nicht ersetzt. CPU-Betrieb, GPU-Einrichtung separat.
+  Updates erhalten Ollama-Imagevariante und Modellvolume. Vollständige frische
+  KI-/HTTPS-Installation auf leerem Rechner noch nicht praktisch validiert.
+- DynDNS-Adressen direkt aktivieren/deaktivieren und mit Bestätigung löschen.
+  Löschen entfernt Manager-Konfiguration, nicht die Domain beim Anbieter.
+- Erststart-Assistent für optionale Module und deren Abhängigkeiten; bestehende
+  Modulauswahl bleibt erhalten. Gemeinsames DEB enthält weiterhin den Modulcode.
+- Linux-Client 0.3.3: Systembackup direkt über HTTPS zum Manager ohne SMB/NFS
+  und ohne vollständige lokale Zwischenkopie; USB-Ziel weiterhin wählbar.
+  Geführte Rücksicherung vollständiger Systeme nur vom Live-System in ein
+  vorbereitetes Ziel; Datei-Rücksicherung separat. Administratoranmeldung für
+  Server-Sicherungen, eigene Client-Sicherungen bleiben für normale Benutzer.
+  Live-USB-Paket im Manager ladbar. Vollständiger Hardware-Restore ungetestet.
+- Desktop-Integration für Client und Manager; Deinstallation über Paketverwaltung.
+- Windows-Client unverändert; Mint 22.x weiterhin experimentell.
+
+0.12-57 – 1. Oktober 2026
+- Linux-Client 0.3.0: geführter Assistent „System sichern & wiederherstellen“.
+  Home, Programmlisten, Paketquellen, Desktop und unterstützte Systemkomponenten
+  auf Linux-formatierte USB-Platte oder eingerichtete NFS-Ablage sichern.
+- Vollständige unterstützte Rücksicherung nur aus einem Linux-Live-System in
+  eine vorhandene Linux-Grundinstallation; einzelne Dateirücksicherung bleibt.
+- Speicherziel, Dateirechte und unvollständige Sicherungen werden geprüft;
+  neue Sicherungen erhalten eigene Ordner und überschreiben keine älteren Stände.
+- Portables ZIP mit Skripten und Anleitung direkt unter Client-Agenten laden.
+  Kein bootfähiges ISO, keine Zugangsdaten im Paket; lokale Administratorrechte nötig.
+- Grenzen: keine Partitionierung oder Bootloaderinstallation; Benutzerprogramme
+  und Identitätsabgleich können manuelle Nacharbeit benötigen. Vollständige
+  Rücksicherung auf echter Zielhardware noch nicht validiert. Bei NFS-Sicherung
+  den Server-Schlafzeitplan vorher pausieren.
+- Windows-Client unverändert 0.2.2; Mint 22.x weiterhin experimentell.
+
+0.12-56 – 1. Oktober 2026
+- Linux-Client 0.2.6: Dateisicherungen direkt zum Server übertragen, ohne
+  vollständiges ZIP-Zwischenarchiv auf dem Client-Systemlaufwerk.
+- Alternativ direkt auf eingehängte USB-/Datenplatte sichern, ohne Serververbindung.
+  Systemlaufwerk und Ziele innerhalb der Quelle sind gesperrt; Speicherreserve
+  und Datenträgerwechsel werden geprüft. ZIP und JSON-Prüfsumme zusammen behalten.
+- Eigenes Home oder ausgewählten Ordner sichern; gesamten Stand oder einzelnen
+  relativen Datei-/Ordnerpfad in einen neuen Zielordner zurücksichern.
+- Server prüft Streaming-Abschnitte, Speicherlimit und Abschlussprüfsumme.
+  Unvollständige Stände erscheinen nicht als fertige Sicherungen.
+- Server-Rücksicherung aus ZIP benötigt weiterhin temporären Speicher; vor und
+  während des Downloads wird eine Reserve geprüft. USB-Restore liest direkt.
+- Grenzen: weiterhin Dateibackup, kein Systemabbild. Vollständiger V20-Systemrestore
+  noch nicht integriert. Windows-Client bleibt unverändert bei 0.2.2.
+- Debian 13 regulär, Mint 22.x weiterhin experimentell.
+
+0.12-55 – 30. September 2026
+- Privater HTTPS-Zugang gleichzeitig über Hostnamen und feste Server-IP.
+  IP-Zugang optional auf eigenem Port (Standard 8443), mit IP im Zertifikat,
+  gleicher Anmeldung und gleichem Netzschutz. Unter HTTPS-Zugang einstellbar.
+- Vorhandene Websites auf dem Domain-Port bleiben erhalten. Stammzertifikat
+  auf Clients vertrauen; bei Änderung der Server-IP Einstellung anpassen.
+- Linux-Client 0.2.4: Version im Fenstertitel und oben im Fenster sichtbar.
+- HTTPS-Einrichtung akzeptiert passende vorhandene hosts-Einträge unverändert.
+  Abweichende Zuordnungen bleiben geschützt und blockieren die Einrichtung.
+- JSON-Profile übernehmen die Server-MAC aus der konfigurierten LAN-/Bridge-
+  Schnittstelle; manuelle Vorgabe unter Server & Modulpfade / Netzwerk möglich.
+- Recovery bleibt vorrangig; ohne Recovery wird bei vorhandener MAC Wake-on-LAN
+  gewählt. WoL-Unterstützung und Hardware-/Betriebssystemeinrichtung erforderlich.
+- Windows-Client bleibt bei 0.2.2, mit vorhandener Versionsanzeige und MAC-Import.
+  Debian 13 regulär, Mint 22.x und Windows-Client weiterhin experimentell.
+
+0.12-54 – 30. September 2026
+- Privater HTTPS-Zugang mit eigener Stammzertifizierungsstelle, konfigurierbarem
+  Namen, Port und Zugangsnetzen. Ersteinrichtung übernimmt den kurzen Rechnernamen.
+- Name später in den Einstellungen änderbar; bestehende Namen bleiben bei Updates
+  erhalten. DNS-/hosts-Einträge und Client-Profile anschließend anpassen.
+- Apache, OpenSSL und Certbot als Paketabhängigkeiten; neue Installationen richten
+  privaten HTTPS-Zugang ein, sofern die Prüfung erfolgreich ist. HTTP bleibt als
+  Übergangs- und Einrichtungszugang erhalten. Öffentliche Domain später optional.
+- Privater Zertifikatserneuerungstimer, auch für kurze Namen; geprüfte Proxy-Header,
+  sichere HTTPS-Sitzungscookies und Rücksicherung bei Konfigurationsfehlern.
+- Client-DEB und Windows-EXE 0.2.2: eigene Ordner sichern und in neuen Ordner
+  wiederherstellen, Prüfsummen, getrennte Ablagen je Client-Profil und Speicherlimit.
+- Backupziel mit UUID-Prüfung, Schlafschutz und Integration in externe Sicherung.
+- Server-Sicherungen nur nach erneuter Anmeldung als Manager-Administrator.
+- Client-Assistent für CA-Fingerabdruck, Zertifikatsimport, optionale Namensauflösung
+  und geprüften HTTPS-Zugang; systemweite Änderungen mit Administratorbestätigung.
+- Client-Dateibackups ersetzen keine Systemabbilder; ACLs, Links, Registry und
+  vollständiger Systemzustand werden nicht übernommen. Windows bleibt experimentell;
+  UAC und Zertifikatsspeicher wurden noch nicht unter echtem Windows geprüft.
+- Debian 13 regulär; Mint 22.x weiterhin experimentell. Keine privaten Serverdaten
+  oder Zugangsdaten im Paket; Version, Infoanzeige und Dokumentation vereinheitlicht.
+
+0.12-53 – 30. September 2026
+- Client-Agenten: Linux-Desktop-DEB 0.1.2 mit Einstellungen, Statussymbol,
+  Benutzer-Autostart und kontrollierter Übernahme vorhandener Skript-Clients.
+- Windows-Client 0.1.0 als EXE: Profilimport, Heartbeat, Serverbedarf/Freigabe,
+  Wake-on-LAN und Recovery; Installation und Autostart für den Benutzer.
+  Windows-Version experimentell: Protokoll und Oberfläche unter Mono geprüft,
+  Windows-Start, DPAPI, Startmenü und Autostart noch nicht live geprüft.
+- DEB und EXE direkt unter Client-Agenten herunterladen; separate persönliche
+  JSON-Profile. EXE-Download prüft die mitgelieferte SHA256-Prüfsumme.
+- Client-Anleitung einklappbar, mit DEB-/EXE-/Shell-Einrichtung und Erklärung
+  zur Modusübertragung: Der Client meldet seinen Modus und Bedarf regelmäßig.
+- Fehler beim Öffnen der Client-Agenten-Seite durch falsches IP-Feld behoben.
+- KVM: ausgeschaltete VM-Systemfestplatte als RAW oder QCOW2 für Rescuezilla
+  exportieren; Abbildvergleich und Download am Auftrag und an der VM.
+  Kein bootbares ISO und keine Mehrplatten-/TPM-/NVRAM-Gesamtsicherung.
+- Paketversion, Infoanzeige und Dokumentation auf 0.12-53 vereinheitlicht.
+- Debian 13 regulär; Mint 22.x weiterhin experimentell.
+
+0.12-52 – 30. September 2026
+- Manager aktualisieren: Fehler beim Öffnen auf Mint mit älterem Flask behoben.
+- Uploadlimits funktionieren auch vor Flask 3.1 pro Anfrage. Dies gilt auch
+  für Downloads-Uploads und KVM-Backup-Uploads; globale Grenzen bleiben erhalten.
+- Regressionstests prüfen Updateseite, Größenbegrenzung und Trennung der Anfragen.
+- Erste Installation dieser Korrektur auf betroffenen Mint-Systemen direkt
+  über die DEB ausführen, da der bisherige Web-Updater nicht geöffnet werden kann.
+- Linux Mint bleibt experimentell; keine Live-Installation im Rahmen des Builds.
+
+0.12-51 – 29. September 2026
+- KVM: ISO- und Disk-Dateien über frei wählbare Serverordner auswählen.
+- Rescuezilla-Sicherungen erkennen und in einer neuen VM zur Wiederherstellung
+  bereitstellen: Start-ISO, leere Zieldisk und schreibgeschützte Sicherungskopie.
+  Die Wiederherstellung erfolgt in Rescuezilla, nicht automatisch im Manager.
+- Getrennte Schritte für Quell-Sicherung, Start-ISO und Ziel. Zielablage pro VM
+  wählbar; Speicherprüfung auf der gewählten Platte, vorhandene Ziele geschützt.
+- Rescuezilla-Quellordner und optionale Start-ISO in den Einstellungen vorbelegen.
+- Verständliche Namensprüfung und Erhalt der Eingaben bei Anlagefehlern.
+- KVM-Installer ergänzt squashfs-tools. Sicherungsmedium nach Restore aushängbar;
+  die zusätzliche Kopie bleibt auf dem Server erhalten.
+- Grenzen: einzelne Festplatte mit 512-Byte-Sektoren und passender Partitions-
+  Metadatei; kein Verkleinern. Zielgröße plus Sicherungskopie, ISO und Reserve
+  müssen frei sein. Bootfähigkeit nach Hardwarewechsel nicht garantiert.
+- Debian getestet; Linux Mint bleibt experimentell und nicht live geprüft.
+
+0.12-50 – 29. September 2026
+- Experimentelle Debian-Phase nach bestätigtem Updatebetrieb beendet.
+  Debian 13 wird als regulärer Stand geführt; Info und Paketmetadaten zeigen
+  dafür keinen Experimentell-Hinweis mehr.
+- Linux Mint 22.x bleibt separat experimentell gekennzeichnet.
+- Release-Bau und GitHub-Entwurf unterscheiden die Plattformstatus.
+- Bereits veröffentlichte Pakete und Sicherungsstand 0.12-47 bleiben unverändert.
+
+0.12-49 – 29. September 2026
+- Fortlaufende Versionsnummern wieder ohne platform-Zusatz: 0.12-49.
+- Getrennte Pakete für Debian 13 und Linux Mint 22.x mit Debian/Mint im Dateinamen
+  und in der Infoanzeige. Experimentell bleibt ein separater Statushinweis.
+- Enthält den aktuellen Treiber-Reiter; Treiberkarten stehen ausschließlich dort.
+- Version 0.12-47 bleibt unveränderter Sicherungsstand. Frühere Pakete bleiben
+  unverändert. Dieser Release hebt die experimentelle Einstufung nicht auf.
+
+0.12-48~platform5 – 29. September 2026
+- Treiberkarten aus Meine Apps entfernt; Digital Devices und NVIDIA werden
+  ausschließlich im Reiter Anwendungen / Treiber angezeigt.
+- Nicht mehr benötigte Ausblendknöpfe entfernt. Der Digital-Devices-Zugang
+  heißt jetzt Version & Updates. Treiber und Dienste bleiben unverändert.
+- Weiterhin experimentell; Sicherungsstand 0.12-47 bleibt unverändert.
+
+0.12-48~platform4 – 29. September 2026
+- Anwendungen: Neuer Reiter Treiber bündelt die Verwaltung von Digital Devices
+  und NVIDIA mit Hardware-, Versions-, Installations- und Updatezugang.
+- Beide Treiberkarten können einzeln aus Meine Apps ausgeblendet und im Reiter
+  Treiber wieder eingeblendet werden. Die Sichtbarkeit wird dauerhaft gespeichert.
+- Ausblenden verändert keine Treiber, Dienste oder Hardwareeinstellungen.
+- Weiterhin experimenteller Stand für Debian 13 und Linux Mint 22.x.
+  Version 0.12-47 bleibt als unveränderter Sicherungsstand erhalten.
+
+0.12-48~platform3 – 29. September 2026
+- Fehlerbehandlung für App-Aufträge mit plan=null korrigiert.
+- APT-Signaturfehler im KVM-Installer verständlicher eingeordnet.
+- Sicherheitsprüfungen bleiben aktiv; Paketquellen werden nicht automatisch geändert.
+
+0.12-48~platform2 – 29. September 2026
+- KVM-Installer: verbliebene Debian-only-Prüfung durch Debian-/Mint-Profil ersetzt.
+- LAN-Texteingabe durch sichtbares Dropdown mit MAC, IP, Typ und Status ersetzt.
+- Explizite Auswahl im Automatikmodus berücksichtigt; fehlende/verschwundene
+  Schnittstellen verständlich melden. NAT als Vorgabe ohne Host-LAN-Änderung.
+- Portablen Installer um Plattformprüfung ergänzt; APT ohne Paketentfernungen.
+
+0.12-48~platform1 – 29. September 2026
+- Experimenteller Plattformzweig ab unverändertem Debian-Stand 0.12-47.
+- Getrennte Paketprofile debian13 und mint22 mit strenger Betriebssystemprüfung.
+- Falsche oder unbekannte Plattformen vor Installation ablehnen; Web-Upload
+  prüft Paketprofil ebenfalls. Vorabprüfung mit install_deb.sh --check.
+- Mint-Grundpaket für Python 3.12; automatische Schlaf-/RTC-Aktionen deaktiviert.
+- Debian-Treiberinstaller auf Mint weiterhin gesperrt; VM-/Hardwarefreigabe offen.
+
+0.12-47 – 29. September 2026
+- Ladezeit von Anwendungen und Apps verwalten korrigiert: Treiberkarten
+  starten keine synchronen APT-, DKMS- oder NVIDIA-Diagnoseprogramme mehr.
+- Geladene Treiberversion bleibt sichtbar; vollständige Prüfungen finden
+  erst beim Öffnen der jeweiligen Treiberverwaltung statt.
+
+0.12-46 – 29. September 2026
+- Digital-Devices-App-Karte mit Hardware-, Versions- und DKMS-Übersicht.
+- Explizite Herstellerprüfung sowie bestätigte Installation, Update auf den
+  geprüften Stand 0.9.41 und Neubau vorhandener Quellen für den laufenden Kernel.
+- Zwei dvb-core-Modi, Secure-Boot-Schutz, feste Downloadprüfsumme und
+  persistente Aufträge über die vorhandene Paketverwaltung.
+- Keine automatische Modul-Entladung, Tvheadend-Unterbrechung oder Firmwareänderung.
+  Aktivierung separat per geplantem Neustart. Neuere Treiber werden zunächst angezeigt.
+
+- NVIDIA-App-Karte mit GPU-, Modul-, Paket- und DKMS-Versionen.
+- Hardwareprüfung mit nvidia-detect, Debian-Paketinstallation, Update und
+  Reparatur mit konkreter Vorschau und erneuter Paketplanprüfung.
+- GPU-Rechenprozesse, unklarer Secure-Boot-Status und fremde Treiberfamilien
+  sperren Treiberänderungen. Keine automatischen Downgrades oder Neustarts.
+
+0.12-45 – 29. September 2026
+- Info-Zugang oben rechts direkt unter den Hostnamen verschoben; bisherige
+  Info-Karte und Untermenüeintrag unter Einstellungen entfernt.
+- Die Info-Seite zeigt GPL-3.0-or-later sowie aufklappbare Lizenztexte und
+  Fremdsoftware-Hinweise. Bestehende Direktlinks bleiben erreichbar.
+
+0.12-44 – 29. September 2026
+- Projektlizenz GPL-3.0-or-later mit vollständigem Lizenztext und Freigabehinweis.
+- README, Debian-Copyright und Release-Manifest enthalten die Lizenzangaben.
+- Lizenzdateien werden in DEB, ZIP, Quellarchiv und einzelne Assets aufgenommen.
+- Makeself-Hinweise und GPL-2.0-or-later bleiben erhalten; optionale Apps und
+  Systemabhängigkeiten behalten ihre eigenen Lizenzen.
+
+0.12-43 – 29. September 2026
+- Release Notes enthalten jetzt die gesamte vorhandene Versionshistorie ab
+  0.12-18 statt ausschließlich der Änderungen der neuesten Version.
+- Funktionsübersicht ordnet die Ergänzungen 0.12-40, 0.12-41 und 0.12-42
+  ausdrücklich ihren Versionen zu und beschreibt den aktuellen Stand.
+- Release-Bau prüft zusätzlich einen Abschnitt zur aktuellen Version in der
+  Funktionsübersicht. Frühere Veröffentlichungspakete bleiben unverändert.
+
+0.12-42 – 29. September 2026
+- Vollständige Veröffentlichungspakete mit Installer-Zusatzmodi und Anleitung.
+- Automatischer Release-Bau mit Versionsabgleich, expliziter Quelldateiliste,
+  Datenschutzmustern, Prüfsummen und Schutz vor Überschreiben alter Releases.
+- GitHub-Workflow prüft zwei Builds und erstellt einen Release-Entwurf.
+- Laufende Serverinstallation wird durch das Erstellen der Dateien nicht verändert.
+
+0.12-41 – 29. September 2026
+- Online-Erkennung prüft nach IPv4-Ping die MAC-Zuordnung im konfigurierten LAN.
+  Eine Antwort setzt nicht mehr alle Geräte mit derselben IP auf online.
+- Abweichende MAC macht die alte IPv4-Zuordnung unbestätigt; fehlende oder
+  mehrdeutige Nachweise aktualisieren keinen erfolgreichen Gerätekontakt.
+- Geräteübersicht erklärt mehrfach gespeicherte IPs und unbestätigte Zuordnungen.
+  Geräte, Namen und Einstellungen werden nicht automatisch zusammengeführt oder gelöscht.
+- Client-Agenten bleiben von der IP-Prüfung ausgeschlossen.
+
+0.12-40 – 29. September 2026
+- Interne Funktionsnamen und aktuelle Dokumentation auf neutrale Manager-Namen
+  umgestellt. Webadressen und Client-API-Adressen bleiben erhalten.
+- Neue Samba-Konfigurationsdateien erhalten das Präfix server-manager-.
+- Alte Datenbankpfade und Kompatibilitätslinks werden separat mit Sicherung
+  migriert. Das Paket führt keine automatische Bereinigung von Bestandsdaten aus.
+
+0.12-39 – 28. September 2026
+- Abgewiesene Deinstallationen zeigen eine deutlich sichtbare Fehlerkarte
+  mit dem Hinweis „Deinstallation nicht gestartet“ und einem direkten Link
+  zurück zur aktuellen Vorschau.
+- Abgelaufene oder bereits abgesendete Vorschauen, ein geänderter
+  Installationsstand und fehlende Bestätigung werden getrennt erklärt.
+- Löschumfang und Schutzprüfungen bleiben unverändert. Das Update startet
+  keine Deinstallation und löscht keine App-Daten.
+
+0.12-38 – 28. September 2026
+- Paketfehler aus Version 0.12-37 behoben: Das Modul zum endgültigen Entfernen
+  von App-Daten wird jetzt mitgeliefert. Die Löschvorschau führt dadurch nicht
+  mehr wegen einer fehlenden Python-Datei zu einem internen Serverfehler.
+- Der DEB-Bau prüft nun statische lokale Python-Importe gegen die Paketliste
+  und bricht ab, wenn ein benötigtes Quellmodul nicht im Paket enthalten wäre.
+- Umfang und Bestätigungen der Löschfunktion bleiben unverändert.
+  Das Manager-Update selbst löscht keine Apps oder App-Daten.
+
+0.12-37 – 28. September 2026
+- DynDNS: Analyse und Reparatur je Anbieter mit IP-Abgleich, DNS-Zone und
+  autoritativen A-/AAAA-Antworten. Bei UDP-Problemen wird TCP versucht.
+- DNS-Prüffehler erzeugen keine neuen Anbieterwartezeiten. Eine erfolgreiche
+  Diagnose kann alte DNS-Fehleranzeigen bereinigen; vorhandene Wartezeiten und
+  Anbietersperren bleiben erhalten. Diagnose sendet kein Anbieter-Update.
+- Apps: Zusätzliche Option zum endgültigen Entfernen der App und ihrer Daten.
+  Löschvorschau, Bestätigung und Eingabe der App-ID sind erforderlich.
+- Verfügbar für eindeutig vom Manager installierte Einzelcontainer-Apps,
+  beispielsweise Jellyfin. Das gesamte angezeigte App-Verzeichnis wird gelöscht,
+  einschließlich dort gespeicherter Medien. Keine automatische Rücksicherung.
+- Externe schreibgeschützt eingebundene Medien, bestehende Backups,
+  Manager-Protokolle und gemeinsame Abhängigkeiten bleiben erhalten.
+  Eigene Container-Netzwerke und exklusiv genutzte Images werden entfernt.
+- Fremde Installationen, zusätzliche Docker-Volumes, Mountpunkte und gemeinsam
+  genutzte oder externe beschreibbare Datenpfade sperren das endgültige Löschen.
+  Andere Installationsarten benötigen weiterhin ein eigenes Löschprofil.
+- Bisherige Deinstallation mit aufbewahrten Daten und Wiederinstallation bleibt.
+  Bei Abbruch der endgültigen Entfernung können Daten bereits gelöscht sein;
+  der Auftrag weist ausdrücklich darauf hin.
+
+0.12-36 – 28. September 2026
+- Pi-hole-Export: Nur Listen als empfohlener Standard. Das ZIP enthält Listen,
+  Domainregeln, Gruppen und Clients, aber keine Webports, Passwörter,
+  DNS-/DHCP-Konfiguration oder DHCP-Leases. Gruppen und Clients können weiterhin
+  gerätespezifische Angaben enthalten.
+- Vollständiger Teleporter-Export separat aufklappbar und nur nach ausdrücklicher
+  Bestätigung. Hinweis auf mögliche Änderungen von Zugang und Netzwerk beim Import.
+- Neue verwaltete Pi-hole-Container erhalten FTLCONF_webserver_port=80 passend
+  zur internen Docker-Portzuordnung. Der äußere Webport bleibt frei wählbar.
+- Bestehende verwaltete Container: Webportschutz unter Netzwerk & Zugang
+  vorbereiten und nach Prüfung aktivieren. Konfiguration wird vorher gesichert;
+  kurzer Containerneustart erforderlich. Auch reguläre Netzwerkumstellungen
+  setzen den internen Webportschutz.
+- Das Manager-Update allein verändert keine vorhandene Pi-hole-Konfiguration.
+  Bestehende Container müssen den Webportschutz einmal ausdrücklich aktivieren.
+
+0.12-35 – 28. September 2026
+- Pi-hole: Einstellungen und Listen als Teleporter-ZIP exportieren und importieren.
+  Importvorschau mit getrennten Optionen für Listen/Gruppen/Clients, Konfiguration
+  und DHCP-Leases; zunächst nur Listen auswählen. Pi-hole-v6-ZIP erforderlich.
+- Vor jedem Import eine Teleporter-Rücksicherung erstellen; letzte Importaufträge
+  und Rücksicherungsdownloads anzeigen. Keine automatische Synchronisation.
+- Optionale Textlisten für FRITZ!Box: aktivierte genaue erlaubte oder gesperrte
+  Domains exportieren, maximal 500 ohne stille Kürzung. Manuelle Übernahme in
+  FRITZ!Box-Filterlisten; kein direkter Routerzugriff. Textlisten lassen sich
+  zusätzlich in Pi-hole importieren. Regex, Abonnements und Gruppenregeln werden
+  nicht gleichwertig übertragen. FRITZ!Box-Erlaubnislisten haben andere Wirkung.
+- Archivgröße, Pfade, Prüfsummen und Domainformat vor Import prüfen.
+  Konfigurationsimporte können Zugang, DNS und DHCP ändern; bei Fehlern sind
+  Teiländerungen möglich. Vorherige Sicherung bleibt erhalten, keine automatische
+  Rücknahme. Langfristige Anfragehistorie ist nicht im Teleporter enthalten.
+- Pi-hole-Bereich in Netzwerk & Zugang umbenannt, passend zur Passwortverwaltung.
+- Tests und Oberfläche geprüft; kein echter Import auf einem Produktiv-Pi-hole
+  durchgeführt. Vor Übertragung auf andere Geräte Sicherung und Umfang prüfen.
+
+0.12-34 – 28. September 2026
+- Pi-hole: Native Installation als Alternative zu Docker unter Apps verwalten.
+  LAN-IP, Webport, Upstream-DNS und Adminpasswort werden abgefragt.
+  Offizieller Installer ergänzt Abhängigkeiten; vorhandene Installationen und
+  belegte DNS-Ports sperren die Neuinstallation. Keine automatische Migration.
+- Bestehendes Pi-hole: Netzwerkadresse und Webport mit Vorschau ändern.
+  Manager-Docker: Web- und DNS-Portbindung; nativ v6: erster IPv4-HTTP-Listener.
+  Weitere native Weblistener und DNS-Konfiguration bleiben erhalten.
+- Eigenständige Adminpasswortänderung mit Wiederholung und Bestätigung.
+  Netzwerk und Ports bleiben dabei unverändert; kurzer Dienstneustart.
+- Konfiguration vor Änderungen schützen und bei Ausführungsfehlern zurücksetzen.
+  Passwörter werden nicht in der Vorschau oder im Auftragsprotokoll ausgegeben.
+- Grenzen: Keine automatische Umstellung fremder Docker-Konfigurationen;
+  Router, DHCP und Client-DNS werden nicht geändert. Bei nativer Installation
+  Teilinstallationen nach Fehlern prüfen. Native Neuinstallation wurde nicht
+  auf einem leeren Zielserver praktisch durchlaufen; Eingaben und Bestandsschutz
+  sowie Netzwerkänderungen/Rücknahme wurden isoliert geprüft.
+
+0.12-33 – 28. September 2026
+- Externe Sicherung: Backupordner und lokale SMB-/NFS-Freigabedaten auswählen;
+  überlappende Quellen nur einmal kopieren. Fotolabor-Rücksicherungen gruppieren.
+- Gesamtgröße und zusätzlichen inkrementellen Platzbedarf ermitteln; lange
+  Quellenlisten zusammenfassen. Größenwerte nach Auswahländerungen neu prüfen.
+- Rücksicherung: abgeschlossenen externen Stand und enthaltene Ordner auswählen,
+  Ziel prüfen und bestätigt in einen neuen datierten Ordner zurückkopieren.
+  Bestehende Dateien bleiben erhalten. App-/VM-Wiederherstellung erfolgt danach
+  im jeweiligen Modul; kein startfähiges Systemabbild und keine automatische
+  Aktivierung zurückkopierter Freigaben. Linux-UID/GID bleiben erhalten.
+- Tatsächliche Tagesbackups statt veralteter Überwachungspfade anzeigen;
+  alte Fehlermeldungen nach erfolgreicher Sicherungskette nicht weiter anzeigen.
+- SQL-Sicherungen unkomprimiert und als gzip erkennen; Altersbewertung beibehalten.
+- Optionalen manuellen Skriptbereich aus der Backupübersicht entfernen.
+  Dateilesetest klar benennen und nicht für Ordnerstände anbieten.
+- Home-Assistant-Anleitung und YAML-Download für eine separate Power/Recovery-API.
+  Optionalen Dienstinstaller bereitstellen: IPMI-Zugang, erlaubte Clients,
+  Dienstadresse und Port abfragen. Vorhandene Fremdinstallation bleibt geschützt.
+  Remote-IPMI-Hardware erforderlich; API nur im geschützten LAN/VPN verwenden.
+  Installation löst keine Stromaktion aus; harter Reset ist standardmäßig aus.
+
+0.12-32 – 27. September 2026
+- Nextcloud-Bestand an üblichen Pfaden und über Webserver/Docker erkennen.
+- Lokale/VPN-Installation ohne öffentliche Domain; Domain und HTTPS später
+  für vom Manager eingerichtete lokale Installationen ergänzen.
+- Weiterleitungen anzeigen, hinzufügen, ändern, abschalten, aktivieren und entfernen;
+  geschützte Abschaltung mit HTTP 410. Übersicht bei Bedarf aufklappen.
+- DynDNS-Ziele kompakter; neue Reverse-Proxys oder Browser-Weiterleitungen mit
+  Zieladresse und Port einrichten. DNS und Router werden nicht automatisch geändert.
+- Verwaltete VMs etwa fünf Minuten vor fälliger geplanter Hostabschaltung vorbereiten.
+  Manuell im Manager sofort regulär herunterfahren; bei ausbleibender VM-Abschaltung
+  innerhalb von fünf Minuten bleibt der Host an. Kein erzwungenes VM-Ausschalten.
+- VM-Fehler über wählbare ntfy-Alarmquelle melden; fehlendes KVM erzeugt keinen Alarm.
+- Externe Gesamtsicherung bestehender Backupordner: UUID-Zielwahl, Einhängen,
+  inkrementelle Kopien mit Hardlinks, datierte Stände, Platz- und Inhaltsprüfung.
+  Ältere Stände bleiben erhalten. Hintergrunddienst überlebt Webdienst-Neustarts.
+- Externe Kopie umfasst vorhandene Sicherungen, kein neues Systemabbild.
+  Linux-Dateisystem erforderlich; Quellordner während des Kopierens nicht ändern.
+- rsync als Paketabhängigkeit für die externe Sicherung aufgenommen.
+- Verbliebene persönliche Beispiel- und Fallbackpfade neutralisiert.
+  Immich-Compose-Rücksicherung nutzt passend zur Sicherungsquelle /opt.
+
+0.12-31 – 27. September 2026
+- Updateprüfungen direkt für alle auswählbaren Apps und Docker erreichbar.
+- Fehlende Registry-Prüfung für dynamische Container-Apps wie Jellyfin und Plex
+  ergänzt; Plattform und konfigurierten Tag bzw. Digest berücksichtigen.
+- SMB/NFS- und Docker-Pakete anhand lokaler APT-Kandidaten vergleichen.
+- Keine falsche Aktualitätsbehauptung bei fehlender Manager-Releasequelle.
+- Netzwerkfehler und fehlende Installationen getrennt von Aktualität behandeln.
+- Bestehende app-spezifische Prüfungen bleiben erhalten.
+
+0.12-30 – 27. September 2026
+- Fehlenden Installer-Sicherheitstoken in der Docker-Verwaltung ergänzt.
+- Behebt „Formular abgelaufen“ bei Installation/Ergänzung, Dienststart
+  und Deinstallation. Schutz gegen ungültige Formulare bleibt erhalten.
+- Formularprüfung mit dem tatsächlichen Installer-Prüfmechanismus getestet.
+
+0.12-29 – 27. September 2026
+- Docker Engine & Compose unter Apps verwalten integriert: installieren,
+  Compose ergänzen, gestoppten Dienst starten oder geschützt deinstallieren.
+- Vollständige Docker-Installation wird erkannt und Installationsbutton ausgegraut.
+  Unklarer Zustand sperrt Installation. Container-Installer verlinken Docker-Verwaltung.
+- Deinstallation lässt Daten bestehen und sperrt bei Containern oder aktivem Swarm.
+- APT full-upgrade mit vorgeschalteter Simulation und Bestätigung ergänzt.
+  Vorschau bleibt eine Momentaufnahme; Paketentfernungen sind möglich.
+- App-Ausführungsfreigaben verständlich sichtbar und dynamisch aktualisiert.
+- ComfyUI-Update und Stable-Verwaltung unter gemeinsamem Zugang zusammengeführt.
+- Backup-Datenträger anhand stabiler Dateisystem-UUID prüfen. Alte Konfiguration
+  ohne UUID muss nach Prüfung des Zielordners erneut gespeichert werden.
+- Zertifikatstest ohne zufällige Wartezeit; Erneuerungszeitplan und Fälligkeit erklärt.
+
+0.12-28 – 26. September 2026
+- OpenIPMI als optionalen Dienst in der Serverübersicht ergänzt, mit Hinweis
+  auf erforderliche Hardware und separater Steuerung von Betrieb und Autostart.
+  Keine automatische Aktivierung des Dienstes.
+- Desktop-Diensttabelle mit festen Spalten und kompakten Aktionsgruppen.
+  DynDNS- und OpenIPMI-Erklärungen sind aufklappbar; schmale Ansichten scrollbar.
+- Beschreibung der Anwendungskarte um Updates, Backup und Wiederherstellung
+  erweitert, einschließlich englischer Übersetzung.
+
+0.12-27 – 26. September 2026
+- Scanner-Zugang heißt jetzt „Scanner API für Home Assistant“, auch auf Englisch.
+- Home-Assistant-Anleitung mit konkreten Schritten für configuration.yaml,
+  vorhandene Abschnitte und !include-Dateien erweitert.
+- Hinweise zu Serveradresse, API-Port, Konfigurationsprüfung, Neustart,
+  Testscan und Abschluss mehrseitiger Scans ergänzt. YAML bleibt herunterladbar.
+
+0.12-26 – 26. September 2026
+- Scanner-Installer legt das Standard-Dienstkonto scanner bei Bedarf an.
+- Scan-Ausgabeordner nachträglich ändern; Dienstbenutzer und Zugriffsgruppe wählen.
+- Ordnerrechte beibehalten oder Zugriff nur für den Dienstbenutzer bzw. zusätzlich
+  lesend/schreibend für eine Gruppe festlegen. Anzeige vorhandener Ordnerrechte.
+- Neue Rechte betreffen den Zielordner und künftige Scans. Bestehende Dateien
+  werden nicht verschoben oder rekursiv umberechtigt; zusätzliche ACLs bleiben geschützt.
+- Neu angelegte Elternordner des Scan-Ausgabeordners sind durchquerbar.
+  Fehler bei fehlenden Zugriffsrechten werden verständlicher erklärt.
+- DEB-Updater erkennt manuelle oder unvollständige Installationen vor dem Upload.
+  Eine manuelle Installation wird nicht automatisch in eine DEB-Installation umgewandelt.
+- Versionsänderungen erstmals als eigene Textdatei im Paket und Download enthalten.
+
+0.12-25 – 26. September 2026
+- KVM ohne erkennbare lokale Installation verursacht keinen falschen Schlafblocker.
+- Laufende KVM-Aufträge und gestörte erkannte Installationen bleiben geschützt.
+- Unter Manager aktualisieren werden nur die zwei letzten Updates angezeigt.
+  Ältere Protokolle bleiben gespeichert.
+
+0.12-24 – 26. September 2026
+- Veralteten Python-Programmcache bei der Paketinstallation bereinigen.
+- Korrigiert falsche Versionsanzeigen trotz installiertem neuerem Paket.
+- Der aktualisierte Updater prüft nach der Installation die laufende Version.
+
+0.12-23 – 26. September 2026
+- Autorenhinweis unter der Versionsnummer auf der Info-Seite ergänzt.
+- Quellversion und Paketversion im Releaseablauf vereinheitlicht.
+
+0.12-22 – 26. September 2026
+- Neue VM-Archive und Downloads enthalten VM-Name, Datum, Uhrzeit und Auftragsnummer.
+- Vorhandene Sicherungen mit älteren Dateinamen bleiben herunterladbar.
+- Funktionsübersicht erstmals im DEB-Paket enthalten und auf die Version abgestimmt.
+
+0.12-21 – 26. September 2026
+- DynDNS-Zielübersicht mit erkannten lokalen Apache-Zielen und Weiterleitungen.
+- Beschreibende Zuordnung von Hostnamen zu Anwendungen, Zielservern und Ports.
+- DNS- und TLS-Prüfung auf Knopfdruck. Zuordnungen ändern keine Verbindungen.
+
+0.12-20 – 26. September 2026
+- Downloads abgeschlossener VM-Sicherungen direkt zwischen Backup-Erstellung
+  und Upload/Wiederherstellung platziert.
+
+0.12-19 – 26. September 2026
+- Leere libvirt-backingStore-Einträge verhindern VM-Backups nicht mehr.
+- Echte abhängige Festplattenketten werden weiterhin abgewiesen.
+
+0.12-18 – 26. September 2026
+- Optionales Heimnetz und TV-Modul; fehlende TV-Installation korrekt berücksichtigen.
+- DynDNS und virtuelle Maschinen als eigene Hauptbereiche.
+- Kontoanzeige als aufklappbares Menü in der Hauptleiste.
+- VM-Backup direkt auf der Backup-/Wiederherstellungsseite starten.
+- Hinweis auf Standard-Anmeldedaten bei unverändertem Installationspasswort.
+- Portprüfung berücksichtigt kurzzeitig nachwirkende geschlossene Verbindungen.
+
+Hinweis: Die Versionsnummer bezeichnet den jeweiligen Paketinhalt.
+Eine Erstellung oder Bereitstellung bedeutet keine automatische Installation.
+
+CLIENT 0.3.4 – BENUTZERANMELDUNG (3. Oktober 2026)
+- Im Client „Am Manager anmelden / eigene Sicherungen“ wählen.
+- Administrator: Einstellungen → Manager-Benutzer → Linux-Konto freigeben,
+  Rolle Benutzer und Bereich Eigene Client-Sicherungen auswählen.
+- Anmeldung mit Linux-Passwort über geprüftes HTTPS. Passwort und Sitzung
+  werden nicht auf Festplatte gespeichert; nach Neustart erneut anmelden.
+- Benutzer dürfen eigene Sicherungen starten und wiederherstellen.
+  Nur Lesen darf eigene vorhandene Sicherungen wiederherstellen.
+- Konto-Sicherungen sind von alten Agenten-Sicherungen getrennt. Alte Stände
+  bleiben im bisherigen Profil erreichbar; Profile nicht miteinander teilen.
+- Server-Backups bleiben Administratoren vorbehalten. Rechteentzug oder
+  Sitzungsablauf beendet den Zugriff; kein automatischer Rückfall auf Tokens.
+- Das bestehende JSON-Profil wird weiterhin für Serveradresse, HTTPS und
+  Agentenfunktionen benötigt. USB-Sicherungen bleiben offline möglich.
+- Vollständige Linux-Systemrücksicherung weiterhin nur im Live-System;
+  normale Benutzer erhalten dadurch keine lokalen Administratorrechte.
+- Diese Erweiterung betrifft die Linux-DEB. Windows-EXE unverändert.
+
+Client 0.3.5 – HTTPS-Proxy-Korrektur (3. Oktober 2026)
+- Konto-Sicherungsanfragen verwenden den Sitzungstoken statt eines
+  HTTPS-Origin-Vergleichs mit dem internen HTTP-Backend.
+- Ablauf, fehlende Rechte und Anfrageprüfung werden getrennt erklärt.
+- Server-Erweiterung und Client 0.3.5 gemeinsam aktualisieren.
+
+Client 0.3.6 – Sicherungswege unterscheiden (3. Oktober 2026)
+- Direkte HTTPS-Systemsicherung an erster Stelle; ohne Ordnerauswahl.
+- USB/NFS-Assistent ausdrücklich beschriftet und vor Start erklärt.
+- HTTPS-Protokoll kennzeichnet den gewählten Übertragungsweg.
+
+
+Entwicklungsstand 4. Oktober 2026 – Benutzer und Gerät koppeln
+- Linux-Client 0.4.1 und Windows-Client 0.2.3: eigenes Token und eigener
+  Schlafblocker pro Manager-Benutzer, Gerät und lokaler Benutzerkennung.
+- JSON-Profil importieren, HTTPS einrichten, am Manager anmelden und
+  Benutzer & Gerät koppeln wählen. Linux: im Dialog Eigene Client-Sicherungen;
+  Windows: direkt in den Einstellungen. Freigabe Eigene Clients & Sicherungen
+  mit Rolle Benutzer oder Administrator erforderlich. Nur Lesen darf nicht koppeln.
+- Ein Benutzer an mehreren PCs und mehrere Benutzer an einem PC melden ihren
+  Bedarf unabhängig. Freigeben wirkt nur auf den eigenen Eintrag.
+- Server-MAC wird im JSON exportiert und bei Kopplung übernommen. Bei vorhandener
+  Recovery-Adresse und Server-MAC stehen beide Weckwege im JSON zur Verfügung.
+- Gerätekennung wird lokal aus machine-id (Linux) oder MachineGuid (Windows)
+  abgeleitet; lokale Benutzerkennung aus UID bzw. SID. Die MAC ist nur Zusatzinfo.
+  Ein geändertes System/Benutzerkonto benötigt ggf. erneute Kopplung.
+- Neue Tokens sind an diese Kennungen gebunden; kopierte Profile passen nicht
+  automatisch zu anderen PCs/Konten. Kein hardwaregestützter Identitätsnachweis:
+  Token und Systemzugang weiterhin schützen; Kennungen können nachgeahmt werden.
+- Kontosperre, Rechte-/Passwortänderung oder deaktivierter Agent verhindert
+  weitere Meldungen. Veralteter Bedarf läuft nach bestehendem Heartbeat-Timeout ab.
+- Alte Profile bleiben als Nicht gekoppelt (Altprofil) sichtbar und funktionieren
+  unverändert. Nach Umstellung aller Nutzer gemeinsames Altprofil deaktivieren.
+  Bestehende Sicherungsablagen werden nicht verschoben; Manager-Konto-Sicherungen
+  bleiben unabhängig von der Gerätekopplung. Manager-Abmeldung beendet nur die
+  Web-/Backupsitzung; Agent über Agent deaktivieren separat abschalten.
+- Windows-Build und Transport geprüft; native Windows-Anmeldung/Registry-SID
+  und Oberfläche noch nicht auf einem echten Windows-PC getestet.
+
+
+Entwicklungsstand 4. Oktober 2026 – Persönliche Client-Einrichtung
+- Unter https://SERVER:HTTPS-PORT/clients/setup nach Manager-Anmeldung die
+  Linux-DEB, Windows-EXE und ein eigenes Einrichtungsprofil herunterladen.
+- Freigabe Eigene Clients & Sicherungen und Rolle Benutzer/Administrator
+  erforderlich. Keine Ansicht fremder Profile oder Tokens. Nur Lesen kann
+  Programme herunterladen, aber keine neue Gerätekopplung einrichten.
+- Profil enthält Serveradresse, Server-MAC, ggf. private Zertifikatsinformationen
+  und einen 15 Minuten gültigen Einmalcode. Am Server nur dessen Hash gespeichert.
+- Linux 0.4.2 / Windows 0.2.4: Profil importieren, speichern, ggf. privates HTTPS
+  nach Fingerabdruckprüfung einrichten; Agent aktivieren tauscht den Code über
+  geprüftes HTTPS gegen das eigene Benutzer-Geräte-Token. Keine Passwortspeicherung.
+- Jedes neue Profil ersetzt frühere unbenutzte Codes desselben Kontos. Bei Ablauf,
+  verlorener Antwort oder fehlgeschlagener lokaler Speicherung neues Profil holen.
+  Rechtänderung/Kontosperre verhindert auch die Einlösung vorhandener Codes.
+- Startmodus Ohne Server starten, anschließend selbst wählen. Stammzertifikat
+  und hosts-Eintrag werden weiterhin nur nach ausdrücklicher Bestätigung geändert.
+  Backupanmeldung bleibt separat; persönliche Einrichtung erteilt keine Server-
+  Backuprechte. Windows bleibt experimentell, native Windows-Prüfung ausstehend.
+
+Entwicklungsstand 04.10.2026 – Client Linux 0.4.3 / Windows 0.2.5:
+Neue Taskleistensymbole: Rot = keine bestätigte Agenten-Verbindung, Gelb = Verbindungsaufbau, Grün = Anmeldung bestätigt. Vorhandene Profile und Heartbeat-Logik bleiben erhalten. Neue Client-Version installieren und neu starten. Windows-Ausführung weiterhin experimentell.
+
+Entwicklungsstand 4. Oktober 2026 – Linux-Client 0.4.4 / Windows-Client 0.2.6
+Hostname im Client anzeigen und über Betriebssystemfunktionen ändern. Administratorfreigabe erforderlich; Windows kann Neustart verlangen. Andere DNS-/Freigabe-Verweise werden nicht geändert. Der nächste Heartbeat aktualisiert den Hostnamen im Manager, die Benutzer-Geräte-Kopplung bleibt erhalten. Linux: Agent aktivieren / übernehmen aktualisiert den Heartbeat nach dem Paketupdate. Windows weiterhin experimentell.
+
+Entwicklungsstand 4. Oktober 2026 – Power & Recovery API 2.2
+Unter Apps verwalten: lokale Installation, Status, Konfiguration und Aktualisierung. Bestehende API 2.1-stable sowie Manager-Fassung 1.0/2.2 erkannt; unbekannter Bestand bleibt unverändert. Import übernimmt Konfiguration und Passwort ohne Ausführung des alten Codes. Geschützte Rücksicherung und Wiederherstellung bei Startfehlern. Laufende Recovery-Aufträge sperren Updates. Installer-ZIP für andere Dauerläufer bleibt verfügbar.
+Dienst ohne root mit systemd-Credentials und Quell-IP-Freigaben. Recovery asynchron; 202 bedeutet angenommen, Ergebnis im Status prüfen. Soft/Reset optional, bei Migration bisherige Auswahl sichtbar. Direkte /soft, /reset, /cycle-Endpunkte entfallen. Nur LAN/VPN, keine öffentliche Portfreigabe. Kein Nextcloud-Wake-Proxy; Installation verändert weder DNS noch Router und schaltet keinen Zielserver.
+
+Sprachvorgabe (Entwicklungsstand 7. Oktober 2026): Englisch ohne gespeicherte Browser-Sprachwahl. Einstellungen / Sprachen bietet Deutsch und Englisch; bestehende Auswahl bleibt erhalten.

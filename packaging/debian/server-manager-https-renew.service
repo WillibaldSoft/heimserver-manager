@@ -1,0 +1,10 @@
+[Unit]
+Description=Heimserver Manager private HTTPS certificate renewal
+After=apache2.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/server-manager
+EnvironmentFile=-/etc/server-manager/server-manager.env
+ExecStart=/usr/bin/python3 /opt/server-manager/tools/manager_https.py --renew
+UMask=0077

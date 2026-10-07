@@ -1,0 +1,7 @@
+{
+  "version": "0.2.7",
+  "date": "2026-10-07",
+  "sha256": "a3042816048187a5c6a1d35478f5fbc48d579a98d3743e29d0b53dbd9fede026",
+  "status": "experimental",
+  "target": "Windows 10 / 11, .NET Framework 4.8"
+}

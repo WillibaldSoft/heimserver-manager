@@ -1,0 +1,11 @@
+#!/bin/sh
+set -eu
+if [ "$1" = install ] && [ -e /opt/server-manager/app.py ]; then
+    if ! dpkg-query -W -f='${Status}' server-manager 2>/dev/null | grep -q 'install ok installed'; then
+        echo 'Vorhandene manuelle Server-Manager-Installation erkannt. Paketinstallation abgebrochen; zuerst eine geplante Migration durchführen.' >&2
+        exit 1
+    fi
+fi
+if [ "$1" = upgrade ] && [ -d /run/systemd/system ]; then
+    deb-systemd-invoke stop server-manager.service || true
+fi

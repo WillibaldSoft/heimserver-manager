@@ -1,0 +1,21 @@
+[Unit]
+Description=Server Manager
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/server-manager
+Environment=SERVER_MANAGER_CONFIG=/etc/server-manager
+Environment=SERVER_MANAGER_STATE=/var/lib/server-manager
+Environment=SERVER_MANAGER_DB=/var/lib/server-manager/server-manager.sqlite3
+Environment=SERVER_MANAGER_PORT=9877
+Environment=PYTHONPYCACHEPREFIX=/var/cache/server-manager/python
+EnvironmentFile=-/etc/server-manager/server-manager.env
+ExecStart=/usr/bin/python3 -m waitress --listen=127.0.0.1:${SERVER_MANAGER_PORT} --threads=8 app:app
+Restart=on-failure
+RestartSec=5
+UMask=0027
+
+[Install]
+WantedBy=multi-user.target

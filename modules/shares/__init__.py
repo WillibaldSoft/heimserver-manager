@@ -1,0 +1,1 @@
+# Manager complete shares manager

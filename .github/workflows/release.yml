@@ -1,0 +1,64 @@
+name: Release-Paket
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Tag und Version prüfen
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          python3 - <<'PY'
+          import os,sys
+          sys.path.insert(0,'tools')
+          from build_deb import version
+          from pathlib import Path
+          expected='v'+version(Path('.')).replace('~','-')
+          if os.environ['REF_TYPE']!='tag' or os.environ['REF_NAME']!=expected:
+              raise SystemExit('Workflow auf dem passenden Versionstag starten: '+expected)
+          PY
+      - name: Paket und Zusatzdateien bauen
+        env:
+          SOURCE_DATE_EPOCH: '0'
+        run: |
+          for target in debian13 mint22; do
+            python3 tools/build_release.py --target "$target"
+          done
+          for directory in dist/heimserver-manager-*; do
+            (cd "$directory" && sha256sum -c SHA256SUMS)
+          done
+      - name: Zweiten Build vergleichen
+        env:
+          SOURCE_DATE_EPOCH: '0'
+        run: |
+          for target in debian13 mint22; do
+            python3 tools/build_release.py --target "$target" --output-root /tmp/release-repeat
+          done
+          for directory in dist/heimserver-manager-*; do
+            diff "$directory/SHA256SUMS" "/tmp/release-repeat/${directory#dist/}/SHA256SUMS"
+          done
+      - name: GitHub-Release als Entwurf erstellen
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          release_version=$(python3 -c "from version import VERSION; print(VERSION)")
+          directory="dist/heimserver-manager-$release_version-debian13"
+          for target in debian13 mint22; do
+            cp "dist/heimserver-manager-$release_version-$target/SHA256SUMS" "dist/SHA256SUMS_$target"
+          done
+          gh release create "$RELEASE_TAG" dist/heimserver-manager-*/*.deb dist/heimserver-manager-*/*_Komplett.zip dist/SHA256SUMS_* "$directory"/*-source.tar.gz "$directory"/Documentation_*_DE_EN.zip "$directory/Home_Server_Manager_Features.txt" "$directory/Home_Server_Manager_Version_History.txt" "$directory/Heimserver_Manager_Funktionsuebersicht.txt" "$directory/Heimserver_Manager_Versionsaenderungen.txt" "$directory/INSTALLATION_EN.txt" "$directory/INSTALLATION.txt" "$directory/RELEASE_NOTES.md" "$directory/RELEASE_NOTES_EN.md" "$directory/LICENSE" "$directory/LICENSE_NOTICE.md" "$directory/THIRD_PARTY_NOTICES.md" --verify-tag --draft --title "Heimserver Manager $release_version – Debian; Mint experimentell" --notes-file "$directory/RELEASE_NOTES_EN.md"

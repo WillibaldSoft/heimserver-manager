@@ -1,0 +1,33 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: Heimserver Manager
+
+Files: *
+Copyright: 2026 Andreas Willibald
+License: GPL-3+
+
+Files: modules/fotolabor/vendor/makeself/*
+Copyright: 1998-2023 Stéphane Peter and other authors named in the source
+License: GPL-2+
+Comment: Original notices are preserved alongside the bundled shell sources.
+
+License: GPL-3+
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+ .
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ .
+ See /usr/share/common-licenses/GPL-3 or the bundled LICENSE file.
+
+License: GPL-2+
+ This component is free software; you can redistribute it and/or modify it
+ under the terms of the GNU General Public License as published by the
+ Free Software Foundation; either version 2, or (at your option) any later version.
+ .
+ This component is distributed without any warranty; without even the
+ implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ .
+ See /usr/share/common-licenses/GPL-2 and the component's bundled COPYING file.
