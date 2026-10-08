@@ -8,6 +8,17 @@
 
 A self-hosted home server dashboard for Debian Linux and homelabs. Manage applications, backups and recovery, Samba/SMB and NFS shares, users, KVM/libvirt virtual machines, DynDNS, and Wake-on-LAN with presence-based sleep control. German and English web interface.
 
+## See the interface
+
+[Screenshot gallery: seven key areas](SCREENSHOTS.md)
+
+<details>
+<summary>Show dashboard (anonymized)</summary>
+
+![Home Server Manager – anonymized dashboard](../screenshots/01-uebersicht.jpg)
+
+</details>
+
 ## Who is it for?
 
 People running a Linux home server or homelab who want a shared web interface for services, storage and backups. The interface supports desktop and smartphone use. The Manager complements the existing Linux system; available functions depend on installed services, hardware and configuration.

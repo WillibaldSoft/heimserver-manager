@@ -8,6 +8,17 @@
 
 **English summary:** A self-hosted home server dashboard for Debian Linux and homelabs. Manage applications, backups and recovery, Samba/SMB and NFS shares, users, KVM/libvirt virtual machines, DynDNS, and Wake-on-LAN with presence-based sleep control. German and English web interface.
 
+## Einblicke in die Oberfläche
+
+[Screenshot-Galerie: sieben wichtige Bereiche](docs/SCREENSHOTS.md)
+
+<details>
+<summary>Übersicht anzeigen (anonymisiert)</summary>
+
+![Heimserver Manager – anonymisierte Übersicht](docs/screenshots/01-uebersicht.jpg)
+
+</details>
+
 ## Für wen ist der Manager gedacht?
 
 Für einen Linux-Heimserver oder ein Homelab, dessen Dienste, Speicher und Sicherungen über eine gemeinsame Weboberfläche bedient werden sollen. Die Oberfläche ist für Desktop und Smartphone ausgelegt. Der Manager ergänzt das vorhandene Linux-System; die nutzbaren Funktionen hängen von installierten Diensten, Hardware und Einrichtung ab.
