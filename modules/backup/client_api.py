@@ -16,7 +16,8 @@ def guard():
     verify_backup_uuid(conf,backup_uuid())
     return conf
 def get_blockers():
-    rows=[]
+    from modules.offline_files import blockers
+    rows=blockers()
     if ACTIVE:rows.append(dict(source='Client-Backup',type='client-backup',title='Desktop-Übertragung aktiv',reason='Sicherung oder Wiederherstellung läuft',priority=95,url='/backup/desktop'))
     try:
         root=direct(Path(server_settings.get('system_backup_root'))/'desktop-client-backup')

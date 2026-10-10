@@ -171,13 +171,13 @@
   },
   "docs/Heimserver_Manager_Funktionsuebersicht.txt": {
     "english": "docs/en/Home_Server_Manager_Features.txt",
-    "english_sha256": "739826d3512241e444c248944a09b10c6ef33ac172282106eee5664ccaf08f6d",
-    "source_sha256": "b17fff88612eac0c67c7990f1e27420328282469447b8de8815d8dc456c5a125"
+    "english_sha256": "34cb62ac5008dd5ce220a4ea3911bef88123fe45e630c9397ae35c2c59c1c68f",
+    "source_sha256": "9c4de9d2a1d2ed13215fa34ad60959d5de0b3cfa04e53f18f0e1aeeac11680f5"
   },
   "docs/Heimserver_Manager_Versionsaenderungen.txt": {
     "english": "docs/en/Home_Server_Manager_Version_History.txt",
-    "english_sha256": "54732d98717b964972a5f20e2550a719d3a00e49d545418806c4774c9189e770",
-    "source_sha256": "0678a53ea06e524556a2a667ef18471e740221d5b95eb08ce5e628cdf1ec5748"
+    "english_sha256": "4174feeb6de3b5c8cbb46b15ba32d2e654c0590af1e09554b409394f0c556570",
+    "source_sha256": "30e0866a9645871367defe7c6230df56bb6579303936f75ebd9acb31bba8ba42"
   },
   "docs/Installer.md": {
     "english": "docs/en/Installer.md",
@@ -221,13 +221,18 @@
   },
   "docs/NEXTCLOUD_SETUP.md": {
     "english": "docs/en/NEXTCLOUD_SETUP.md",
-    "english_sha256": "03864f3f4d8ec1525da45572bdcea5fc40d206521c53db2690da36b106bb9782",
-    "source_sha256": "5ddefec07e1bc4b0b3bcf23b5fe20f20feb54a035fea6fb5dde0a19dc8b0f467"
+    "english_sha256": "f713568cd5f91e2c939f033e72df3fcf346bbbd39f36ca806e6dd6df7fb4d8e5",
+    "source_sha256": "0676d5e556becd50045f5d33eb9acc1f9051b13a9250c0b0ba426e408318df8c"
   },
   "docs/NVIDIA.md": {
     "english": "docs/en/NVIDIA.md",
     "english_sha256": "cc71691a43c738b1d0e44a521ba17db9b3314c70868aab80cc113c6e49d90026",
     "source_sha256": "e41a3656b35daac1ccc70ce30d9c1bdf0d10ea528123c11c10124288dac14c92"
+  },
+  "docs/OFFLINE_FILES.md": {
+    "english": "docs/en/OFFLINE_FILES.md",
+    "english_sha256": "ba0c909ec8274d33adafc50dbef0a806efea2ae17f1baf1ff635eea7c1583f3f",
+    "source_sha256": "59b4c8a7729cc873cac6d693ccfc758d72f6f9385d822c2c54cff0a93ac39b94"
   },
   "docs/PLATTFORMEN.md": {
     "english": "docs/en/PLATTFORMEN.md",

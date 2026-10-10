@@ -19,7 +19,7 @@ import ipaddress
 from flask import request, session, redirect, jsonify, g
 from werkzeug.security import generate_password_hash, check_password_hash
 
-AGENT_PATHS={'/api/clients/enroll','/api/clients/backup','/api/clients/status','/api/clients/heartbeat','/api/clients/need-server','/api/clients/release-server'}
+AGENT_PATHS={'/api/clients/offline','/api/clients/enroll','/api/clients/backup','/api/clients/status','/api/clients/heartbeat','/api/clients/need-server','/api/clients/release-server'}
 SESSION_SECONDS=8*60*60
 
 

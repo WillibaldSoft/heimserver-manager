@@ -76,3 +76,11 @@ vorhanden. Automatischer Docker-SQL-Restore ist nicht Bestandteil dieses Ablaufs
 
 Grundlagen: https://github.com/nextcloud/docker und
 https://docs.nextcloud.com/server/latest/admin_manual/maintenance/backup.html
+
+## Nextcloud Wake
+
+- Nextcloud-Wake: Inaktive Vorbereitung speichern, ohne Dienste, DNS, Router oder Zertifikate zu ändern. Getrennte spätere Gateway-Installation.
+- Einstellbarer Statuspfad unterstützt Nextcloud in Unterordnern; DAV-Anfragen und bestehende URLs bleiben unverändert. Blocker-Profil vor Installation erforderlich; WebSockets bleiben ausgeschlossen.
+
+### Diagnose der Aufweck- und Nachlaufgründe
+Der Gateway protokolliert Anfragekennungen, pseudonymisierte Quelladressen, grobe Client-/Pfadkategorien sowie Recovery-Aufruf und Ergebnis im systemd-Journal. Keine vollständigen URLs, Header, Tokens oder Cookies. Maximal 120 Ereignisse pro Minute; ausgelassene Ereignisse werden später gezählt. Client-Kategorien beruhen auf unbestätigten User-Agent-Angaben. Schlafprotokolle nennen bei Nachlauf-Rücksetzungen die aktuellen Blocker oder einen Wach-Zeitplan. Zusätzliche Rücksetzungsprotokolle werden sieben Tage aufbewahrt. Gateway-Journalaufbewahrung richtet sich nach der systemweiten journald-Konfiguration. Keine rückwirkende Ermittlung früherer Auslöser.

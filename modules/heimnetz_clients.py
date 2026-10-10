@@ -1935,6 +1935,8 @@ def device_type_select(ctx, current):
 
 
 def register(app, ctx):
+    from modules.offline_files import register as offline_register
+    offline_register(app,ctx)
     from modules.heimnetz_extra.client_bindings import register as register_bindings
     register_bindings(app,ctx,init_tables,server_wol_mac)
     # Dependent modules require these tables on the very first startup.
@@ -2681,7 +2683,7 @@ def register(app, ctx):
         finally:
             con.close()
 
-        body = _ui_html("<div class='card'><h2>Clients</h2><p>Client-Agenten mit eigenem Modus und Schlafblocker. Für neue Clients die persönliche Einrichtung unten verwenden. Jede Benutzer-Geräte-Kombination erhält einen eigenen Eintrag; Freigeben betrifft nur diesen. Alte JSON-Profile bleiben ungekoppelt nutzbar. MAC-Adressen sind Zuordnungshilfen, keine Anmeldedaten.</p>")
+        body = _ui_html("<div class='card'><h2>Clients</h2><p><a class='btn' href='/clients/offline'>Offline-Dateien · Freigaben</a></p><p>Client-Agenten mit eigenem Modus und Schlafblocker. Für neue Clients die persönliche Einrichtung unten verwenden. Jede Benutzer-Geräte-Kombination erhält einen eigenen Eintrag; Freigeben betrifft nur diesen. Alte JSON-Profile bleiben ungekoppelt nutzbar. MAC-Adressen sind Zuordnungshilfen, keine Anmeldedaten.</p>")
         if msg:
             body += f'{_ui_html('<p><b>')}{ctx.esc(_ui_text(msg))}{_ui_html('</b></p>')}'
         body += _ui_html("<p><a class='btn' href='/heimnetz'>Aus Heimnetz übernehmen</a></p></div>")

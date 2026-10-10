@@ -1,7 +1,7 @@
 """Build a generic desktop client, deriving shell logic from the current installer."""
 import ast,shlex,shutil,subprocess,tempfile
 from pathlib import Path
-VERSION='0.4.5'
+VERSION='0.4.17'
 
 def legacy_parts(source):
     tree=ast.parse(source.read_text())
@@ -62,7 +62,7 @@ def build(root,output):
         write('usr/lib/heimserver-manager-client/system-migration.sh',migration,0o755)
         write('usr/lib/heimserver-manager-client/system-recovery.sh',(root/'client_agent/desktop/system-recovery.sh').read_text(),0o755)
         write('usr/lib/heimserver-manager-client/system_recovery.py',(root/'client_agent/desktop/system_recovery.py').read_text())
-        for name in ['client_i18n.py','client_en.json','device_identity.py','incremental.py','system_components.py','system_files.py','core.py','gui.py','backup.py','connection.py','extras_ui.py','https_admin.py','system_recovery_ui.py','system_stream.py','system_https.py','system_restore.py','system_restore_ui.py','system_recovery.py']:
+        for name in ['offline_smb.py','offline_lifecycle.py','offline_systemd.py','offline_mount_admin.py','offline_mounts.py','offline.py','offline_ui.py','client_i18n.py','client_en.json','device_identity.py','incremental.py','system_components.py','system_files.py','core.py','gui.py','backup.py','connection.py','extras_ui.py','https_admin.py','system_recovery_ui.py','system_stream.py','system_https.py','system_restore.py','system_restore_ui.py','system_recovery.py']:
             write('usr/lib/heimserver-manager-client/'+name,(root/'client_agent/desktop'/name).read_text())
         for name in ('offline','connecting','online'):
             target=stage/'usr/lib/heimserver-manager-client/icons'/(name+'.png');target.parent.mkdir(parents=True,exist_ok=True)
@@ -80,7 +80,7 @@ def build(root,output):
         write('usr/share/doc/heimserver-manager-client/SYSTEM_RECOVERY.txt',(root/'docs/CLIENT_SYSTEM_RECOVERY.txt').read_text())
         write('usr/share/doc/heimserver-manager-client/README.txt',(root/'client_agent/desktop/README.txt').read_text())
         write('usr/share/doc/heimserver-manager-client/copyright',(root/'LICENSE').read_text())
-        write('DEBIAN/control',f'Package: heimserver-manager-client\nVersion: {VERSION}\nSection: net\nPriority: optional\nArchitecture: all\nMaintainer: Heimserver Manager project\nDepends: python3 (>= 3.10), python3-gi, gir1.2-gtk-3.0, gir1.2-ayatanaappindicator3-0.1, curl, bash, systemd, wakeonlan, openssl, ca-certificates, pkexec, rsync, acl, gnupg, xterm\nDescription: Desktop client for Heimserver Manager\n User-session agent, GTK settings and notification-area indicator.\n')
+        write('DEBIAN/control',f'Package: heimserver-manager-client\nVersion: {VERSION}\nSection: net\nPriority: optional\nArchitecture: all\nMaintainer: Heimserver Manager project\nDepends: python3 (>= 3.10), python3-gi, gir1.2-gtk-3.0, gir1.2-ayatanaappindicator3-0.1, curl, bash, systemd, wakeonlan, openssl, ca-certificates, pkexec, python3-smbc, libsecret-tools, rsync, acl, gnupg, xterm\nDescription: Desktop client for Heimserver Manager\n User-session agent, GTK settings and notification-area indicator.\n')
         # Do not inherit the build host's umask (or TemporaryDirectory's 0700).
         # All package directories must be traversable by desktop users.
         stage.chmod(0o755)

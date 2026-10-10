@@ -17,7 +17,7 @@ try:
     from client_version import VERSION
 except ImportError:
     VERSION=tr('Entwicklungsstand')
-import extras_ui,connection
+import extras_ui,connection,offline_ui,offline_lifecycle
 
 LABELS={'SERVER_URL':tr('Manager-Adresse (http:// oder https://)'),'TOKEN':tr('Agenten-Token'),'CLIENT_NAME':tr('Client-Name'),'CLIENT_MAC':tr('Client-MAC (optional)'),'IPMI_RECOVER_URL':tr('Recovery-Adresse (optional)'),'SERVER_MAC':tr('Server-MAC für Wake-on-LAN'),'WAKE_TIMEOUT':tr('Recovery-Timeout (1–300 Sekunden)')}
 MODES={'without_server':tr('Ohne Server starten'),'with_server':tr('Mit Server starten / Server benötigt'),'wake_on_access':tr('Nur auf ausdrücklichen Aufruf wecken')}
@@ -28,7 +28,7 @@ class App(Gtk.Application):
         self.window=None;self.entries={};self.busy=False;self.polling=False;self.indicator=None;self.connecting=False;self.connected=False
     def do_startup(self):
         Gtk.Application.do_startup(self);self.hold()
-        self.make_window();self.make_tray();GLib.timeout_add_seconds(15,self.refresh);self.refresh()
+        self.make_window();self.make_tray();self.offline_lifecycle=offline_lifecycle.Monitor(self);GLib.timeout_add_seconds(15,self.refresh);self.refresh()
     def do_command_line(self,command):
         args=command.get_arguments()
         if '--autostart' in args and not core.CONFIG.exists():self.quit();return 0
@@ -65,7 +65,8 @@ class App(Gtk.Application):
         hostbox=Gtk.Box(spacing=6);self.hostname_entry=Gtk.Entry();self.hostname_entry.set_text(core.hostname());hostbox.pack_start(self.hostname_entry,True,True,0)
         change=Gtk.Button(label=tr('Ändern …'));change.connect('clicked',lambda _:self.change_hostname());hostbox.pack_start(change,False,False,0);grid.attach(hostbox,1,row,1,1)
         buttons=Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE,max_children_per_line=3);outer.pack_start(buttons,False,False,0)
-        for label,callback in [(tr('Am Manager anmelden / eigene Sicherungen'),lambda:extras_ui.manager_login(self)),(tr('Eigene Backups / Wiederherstellung'),lambda:extras_ui.backups(self)),(tr('Privates HTTPS'),lambda:extras_ui.https(self)),(tr('Server-Backup (Administrator)'),lambda:extras_ui.server(self)),(tr('Speichern'),self.save),(tr('Profil importieren'),self.import_profile),(tr('Bestehende Einstellungen laden'),self.reload),(tr('Agent aktivieren / übernehmen'),self.enable),(tr('Agent deaktivieren'),self.disable),(tr('Protokoll'),self.show_logs),(tr('Aktualisieren'),lambda:self.refresh())]:
+        GLib.timeout_add_seconds(60,offline_ui.tick,self)
+        for label,callback in [(tr('Offline-Dateien'),lambda:offline_ui.show(self)),(tr('Am Manager anmelden / eigene Sicherungen'),lambda:extras_ui.manager_login(self)),(tr('Eigene Backups / Wiederherstellung'),lambda:extras_ui.backups(self)),(tr('Privates HTTPS'),lambda:extras_ui.https(self)),(tr('Server-Backup (Administrator)'),lambda:extras_ui.server(self)),(tr('Speichern'),self.save),(tr('Profil importieren'),self.import_profile),(tr('Bestehende Einstellungen laden'),self.reload),(tr('Agent aktivieren / übernehmen'),self.enable),(tr('Agent deaktivieren'),self.disable),(tr('Protokoll'),self.show_logs),(tr('Aktualisieren'),lambda:self.refresh())]:
             btn=Gtk.Button(label=label);btn.connect('clicked',lambda _,cb=callback:cb());buttons.add(btn)
         try:self.fill(core.load())
         except Exception:self.fill(core.DEFAULTS);self.notice.set_text(tr('Bestehende Konfiguration konnte nicht gelesen werden. JSON-Profil importieren; bisherige Dateien bleiben unverändert.'))

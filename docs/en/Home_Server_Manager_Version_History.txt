@@ -3,6 +3,40 @@ This file is continued with each new DEB version.
 Review since 0.12-18 based on created packages and documented changes.
 
 
+0.12-67 – October 10, 2026
+- Offline files: select a user/client first, then edit its folder assignments. Only mounts and configured SMB/NFS share roots are selectable; no subdirectories are enumerated. Other clients and existing permissions are preserved.
+- Offline files: deeper subfolders selectable in Linux/Windows clients (0.4.8 / 0.2.10). Existing SMB/NFS/Linux rights replace extra write grants; ambiguous rules are refused. File operations run as the paired Linux user, not the emergency ADMIN account.
+- Offline files: select mounted folders and their immediate subfolders; new grants check mount identity, using UUID where available, before synchronization.
+- Nextcloud/DAVx5 waking: Active, Inactive or daily schedule with up to eight non-overlapping periods, including overnight, and a default outside periods. Uses gateway host local time. Recovery API, Home Assistant and client wake commands remain independent; running servers remain accessible.
+- Offline files: multiple selection, batch setup and sequential synchronization; Linux client 0.4.7 and Windows client 0.2.9.
+- Added offline files (beta) for Linux and Windows clients: separate folder grants, HTTPS, conflict protection and expiring sleep blockers. Changed files only, no block-level synchronization.
+- Diagnostic logs record reasons for resetting the shutdown grace period and wake requests. Wake logs exclude full URLs, credentials and raw client IP addresses and have a limited logging rate. Earlier triggers cannot be reconstructed retroactively.
+
+Linux client 0.4.9 (2026-10-10): Existing SMB/NFS mounts are detected and can be associated with an offline share. Transfers continue over HTTPS; no mounts are created or modified. Offline destinations inside, above or equal to known network mounts are rejected; saved associations also protect unmounted paths. Windows client unchanged.
+
+Linux client 0.4.10 (2026-10-10): After explicit confirmation and administrator authorization, a simple SMB/NFS fstab mount can be replaced by a link to the local offline folder. A conflict-free HTTPS synchronization runs first. The existing path remains usable; fstab and the mount directory are backed up. Returning to the network mount requires confirmation and retains local files. Busy mounts are never forcibly detached. Automounts, custom mount services and writable mount parent directories are not automatically converted. Samba offline data currently synchronizes read-only; local edits are not uploaded to the server.
+
+Linux client 0.4.11 (2026-10-10): Confirmed offline switching now supports native systemd automount units and fstab-generated SMB/NFS automounts. A dedicated persistent start condition prevents remounting during offline use. Original units, fstab entries and enablement remain unchanged. Previous active/inactive states are saved and restored when switching back. Busy mounts are never forcibly detached; changed unit configurations and overridden start guards are rejected. A successful conflict-free HTTPS synchronization, confirmation and administrator authorization remain required.
+
+Linux client 0.4.12 (2026-10-10): “Use mount path for offline files” automatically suggests a separate local storage folder. An existing configured local folder is retained; invalid network destinations are rejected. Confirmation shows the usual access path and local storage location before saving settings, synchronizing files or changing mounts. Conflict-free synchronization and administrator authorization remain required.
+
+Linux client 0.4.13 (2026-10-10): Create or adopt local offline folders directly in the client. Write access is checked before saving or synchronizing; where needed, explicit administrator authorization creates the folder or changes its owner. No recursive permission changes and no client running as root. Network mounts and system folders are excluded. Privileged creation requires an existing protected parent directory.
+
+Linux client 0.4.14 (2026-10-10): Two-way synchronization for supported SMB shares with an additional SMB login. Passwords are stored only in the local keyring; HTTPS read access and existing manager assignments are still required. Samba enforces write and inheritance permissions. Existing files retain their owner and ACL during updates; previous content is retained on the server with verified permissions. Interrupted writes may leave incomplete server content: keep the local file and retained revision, review the conflict and resolve it explicitly. Diverging revisions are never silently overwritten.
+Per-folder options remain editable: synchronize at login / client startup and before shutdown. Shutdown never wakes the server; if unreachable, proceed immediately after a brief connection check. Otherwise wait at most 60 seconds, additionally capped by systemd-logind (often 5 seconds). The client must be running; forced power-off cannot be intercepted. Errors and timeouts remain visible as pending. The next startup retries if startup synchronization is enabled. New package dependencies: python3-smbc and libsecret-tools. Windows client unchanged.
+
+Linux client 0.4.15 / Windows client 0.2.11 (2026-10-10): Removed the 256 MiB offline file limit, including support for larger ISO files. Transfers use bounded chunks; storage quotas, free space, permissions and timeouts still apply. Temporary server storage requires the file size plus a 512 MiB reserve. Links and special files remain excluded.
+
+Linux client 0.4.16 (2026-10-10): Selecting a network mount suggests an offline destination matching its folder structure, inserting Offline between the parent directory and mount name. The suggestion remains editable. Existing assignments are retained when opening the dialog; existing files are not moved automatically.
+
+Linux client 0.4.17 (2026-10-10): New “Include all server subfolders” button selects the entire assigned server folder and clears exclusions after confirmation. Files in deeper subfolders are synchronized recursively. Review the destination and save; no immediate sync is started. Permission checks remain in force; empty directories, links and nested mounts are not included.
+
+Nextcloud wake fix (2026-10-10): Recognized Nextcloud desktop background polls (DAV PROPFIND and selected status endpoints) no longer wake the server or extend sleep blockers. Sleeping servers return HTTP 503 with a retry hint for these polls. File transfers and DAVx5 remain protected. Other clients and unknown requests retain existing behavior; classification is not authentication.
+
+0.12-66 – October 10, 2026
+- Nextcloud Wake: save an inactive preparation without changing services, DNS, router or certificates. Gateway installation remains a separate later action.
+- Configurable status path supports Nextcloud in subdirectories; DAV requests and existing URLs are preserved. A blocker profile is required before installation; WebSockets remain unsupported.
+
 0.12-65 – October 7, 2026
 - Group selection: check or uncheck memberships and apply them together with “Save groups”. The primary group is protected; the administrator password and explicit confirmation for changes to privileged groups are required. Stale group selections are rejected.
 - User administration with individual group changes including sudo; protects memberships omitted from previous selection lists.

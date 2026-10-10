@@ -38,3 +38,11 @@ Check Update compares platform-specific image digests in the official Nextcloud 
 
 Basics: https://github.com/nextcloud/docker and
 https://docs.nextcloud.com/server/latest/admin_manual/maintenance/backup.html
+
+## Nextcloud Wake
+
+- Nextcloud Wake: save an inactive preparation without changing services, DNS, router or certificates. Gateway installation remains a separate later action.
+- Configurable status path supports Nextcloud in subdirectories; DAV requests and existing URLs are preserved. A blocker profile is required before installation; WebSockets remain unsupported.
+
+### Diagnosing wake and grace-period causes
+The gateway records request IDs, pseudonymized source addresses, coarse client/path categories, recovery calls and results in the systemd journal. No complete URLs, headers, tokens or cookies. At most 120 events per minute; suppressed events are counted later. Client categories rely on unverified User-Agent claims. Sleep logs identify current blockers or an awake schedule when the grace period resets. Additional reset records are retained for seven days. Gateway journal retention follows system-wide journald settings. Earlier causes cannot be reconstructed retroactively.

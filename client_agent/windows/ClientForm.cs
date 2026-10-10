@@ -22,6 +22,7 @@ namespace HeimserverClient {
         readonly NotifyIcon tray = new NotifyIcon();
         readonly TrayIcons icons = new TrayIcons();
         bool connecting, connected;
+        readonly System.Windows.Forms.Timer offlineTimer = new System.Windows.Forms.Timer();
         readonly System.Windows.Forms.Timer timer = new System.Windows.Forms.Timer();
         readonly EventWaitHandle openEvent;
         readonly bool testMode;
@@ -73,7 +74,11 @@ namespace HeimserverClient {
             autostart.Text = I18n.Tr("Statussymbol bei Windows-Anmeldung starten"); autostart.AutoSize = true;
             autostart.Checked = !test && (WindowsIntegration.Autostart || !File.Exists(Storage.ConfigPath));
             grid.Controls.Add(autostart, 0, grid.RowCount++); grid.SetColumnSpan(autostart, 2);
+            offlineTimer.Interval=60000;
+            offlineTimer.Tick+=async (sender,args)=>{if(busy)return;try{var row=OfflineFiles.Due();if(row!=null){notice.Text=await Task.Run(()=>OfflineFiles.Sync(saved.config,row));}}catch(Exception error){notice.Text=error.Message;}};
+            offlineTimer.Start();
             var buttons = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Fill, WrapContents = true };
+            Button(buttons, I18n.Tr("Offline-Dateien"), () => { try { new OfflineForm(saved.config).ShowDialog(this); } catch(Exception ex){Say(ex.Message);} });
             Button(buttons, I18n.Tr("Eigene Backups / Wiederherstellung"), () => { try { new ExtrasForm(saved.config,false,null).ShowDialog(this); } catch(Exception ex){Say(ex.Message);} });
             Button(buttons, I18n.Tr("Privates HTTPS"), () => { try { new ExtrasForm(saved.config,true,url=>{fields["SERVER_URL"].Text=url;Save(null);}).ShowDialog(this); } catch(Exception ex){Say(ex.Message);} });
             Button(buttons, I18n.Tr("Server-Backup (Administrator)"), () => { try { if(MessageBox.Show(this,I18n.Tr("Server-Sicherungen sind ausschließlich für den Manager-Administrator. Im Browser mit dem Manager-Konto anmelden. Das Passwort wird nicht im Client gespeichert."),I18n.Tr("Server-Backup"),MessageBoxButtons.OKCancel)==DialogResult.OK) System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(saved.config.Validate().SERVER_URL+"/login?reauth=1&next=/backup"){UseShellExecute=true}); } catch(Exception ex){Say(ex.Message);} });

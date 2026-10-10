@@ -22,6 +22,15 @@ def _mark_keepawake_now(con, reason="runtime-start"):
 def _log(con, action, allowed, result, details=""):
     policy.record_action(con, "runtime", action, allowed, result, details)
 
+def record_grace_reset(con,action,blockers):
+    # Store only blocker identity, never arbitrary provider payloads or credentials.
+    selected=[{'source':str(b.get('source','unknown'))[:80],
+               'name':str(b.get('title') or b.get('name') or b.get('type') or 'unknown')[:160]} for b in blockers if not managed_blocker(b)]
+    _log(con,'grace-reset',False,'schedule-wake' if action=='wake' else 'active-blockers',
+         json.dumps({'schedule_action':action,'blockers':selected[:30],'blocker_count':len(selected)},ensure_ascii=False))
+    con.execute("DELETE FROM sleep_engine_actions WHERE mode='grace-reset' AND created_at < datetime('now','localtime','-7 days')")
+    con.commit()
+
 def execute_scheduled(con, action, decision, execute_enabled, ctx=None):
     # Called only after auto-enabled and grace checks. Dry-run never touches guests.
     if not execute_enabled:
@@ -116,6 +125,7 @@ def _loop(ctx, interval=60):
                             "last_keepawake_seen",
                             datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                         )
+                        record_grace_reset(con,action,decision["blockers"])
 
                     last_keep = policy.get_setting(con, "last_keepawake_seen", "")
                     grace_active = False

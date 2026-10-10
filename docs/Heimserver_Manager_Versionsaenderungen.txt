@@ -3,6 +3,40 @@ Diese Datei wird bei jeder neuen DEB-Version fortgeführt.
 Rückblick ab 0.12-18 anhand der erstellten Pakete und dokumentierten Änderungen.
 
 
+0.12-67 – 10. Oktober 2026
+- Offline-Dateien: zuerst Benutzer/Client wählen, dann dessen Ordnerzuordnung ändern. Nur Mounts und eingerichtete SMB-/NFS-Freigabeordner auswählbar; keine Verzeichnisauflistung darunter. Andere Clients und bestehende Rechte bleiben erhalten.
+- Offline-Dateien: tiefere Unterordner in Linux-/Windows-Clients auswählbar (0.4.8 / 0.2.10). Vorhandene SMB-/NFS-/Linux-Rechte statt zusätzlicher Schreibfreigabe; unklare Regeln werden gesperrt. Dateizugriffe unter dem gekoppelten Linux-Benutzer, nicht dem Notfallkonto ADMIN.
+- Offline-Dateien: eingehängte Ordner und direkte Unterordner auswählbar; neue Freigaben prüfen vor dem Abgleich die Mount-Identität, soweit verfügbar per UUID.
+- Nextcloud-/DAVx5-Aufwecken: Aktiv, Inaktiv oder Tageszeitplan mit bis zu acht überschneidungsfreien Zeiträumen, auch über Mitternacht, und Grundzustand außerhalb. Es gilt die Ortszeit des Dauerläufers. Recovery-API, Home Assistant und Client-Weckbefehle bleiben unabhängig; laufende Server bleiben erreichbar.
+- Offline-Dateien: Mehrfachauswahl, gemeinsame Einrichtung und sequenzieller Abgleich; Client-Versionen Linux 0.4.7 und Windows 0.2.9.
+- Offline-Dateien (Beta) für Linux- und Windows-Clients ergänzt; getrennte Ordnerfreigaben, HTTPS, Konfliktschutz und befristete Schlafblocker. Nur geänderte Dateien, kein blockweiser Abgleich.
+- Diagnoseprotokolle erfassen Auslöser für das Zurücksetzen der Nachlaufzeit und Wake-Anfragen. Keine vollständigen URLs, Zugangsdaten oder unveränderten Client-IP-Adressen im Wake-Protokoll; begrenzte Protokollrate. Frühere Auslöser lassen sich dadurch nicht rückwirkend feststellen.
+
+Linux-Client 0.4.9 (10.10.2026): Vorhandene SMB-/NFS-Mounts werden erkannt und lassen sich einer Offline-Freigabe zuordnen. Die Übertragung bleibt HTTPS; es werden keine Mounts erzeugt oder geändert. Offline-Ziele innerhalb, oberhalb oder identisch zu bekannten Netzwerk-Mounts werden gesperrt; gespeicherte Mount-Zuordnungen schützen auch bei ausgehängtem Mount. Windows-Client unverändert.
+
+Linux-Client 0.4.10 (10.10.2026): Ein bestehender einfacher SMB-/NFS-fstab-Mount kann nach ausdrücklicher Bestätigung und Administratorfreigabe durch einen Link auf den lokalen Offline-Ordner ersetzt werden. Vorher wird konfliktfrei über HTTPS synchronisiert. Der bisherige Pfad bleibt nutzbar; fstab und Mountverzeichnis werden gesichert. Rückkehr zum Netzwerk-Mount mit Bestätigung möglich, lokale Dateien bleiben erhalten. Keine erzwungene Trennung belegter Mounts. Automounts, eigene Mount-Dienste und beschreibbare Mount-Elternverzeichnisse werden nicht automatisch umgestellt. Samba-Offlinedaten derzeit nur lesend; lokale Änderungen werden nicht zum Server zurückgeschrieben.
+
+Linux-Client 0.4.11 (10.10.2026): Die bestätigte Offline-Umschaltung unterstützt nun eigene systemd-Automount-Units und aus fstab erzeugte Automounts für SMB/NFS. Eine eigene dauerhafte Startbedingung verhindert erneutes Einhängen während des Offline-Betriebs. Originale Units, fstab-Einträge und Autostart bleiben unverändert. Der frühere aktive/inaktive Zustand wird gesichert und beim Rückwechsel wiederhergestellt. Belegte Mounts werden nicht erzwungen getrennt; geänderte Unit-Konfigurationen und übersteuerte Startsperren werden abgewiesen. Vorheriger erfolgreicher konfliktfreier HTTPS-Abgleich, Bestätigung und Administratorfreigabe bleiben erforderlich.
+
+Linux-Client 0.4.12 (10.10.2026): „Mount-Pfad für Offline-Dateien übernehmen“ schlägt automatisch einen separaten lokalen Speicherordner vor. Ein bereits eingerichteter lokaler Ordner wird weiterverwendet; ungültige Netzwerk-Ziele werden abgewiesen. Die Bestätigung zeigt gewohnten Zugriffspfad und lokalen Speicherort, bevor Einstellungen gespeichert, Dateien synchronisiert oder Mounts geändert werden. Danach gelten weiterhin konfliktfreier Abgleich und Administratorfreigabe.
+
+Linux-Client 0.4.13 (10.10.2026): Lokale Offline-Ordner direkt im Client anlegen oder übernehmen. Vor dem Speichern und Synchronisieren werden Schreibrechte geprüft; falls erforderlich, gezielte Administratorfreigabe zum Anlegen oder Ändern des Ordnereigentümers. Keine rekursive Rechteänderung, kein Client-Start als root. Netzwerk-Mounts und Systemordner bleiben ausgeschlossen. Bei privilegiertem Anlegen muss der übergeordnete Ordner bereits vorhanden und geschützt sein.
+
+Linux-Client 0.4.14 (10.10.2026): Beide Synchronisationsrichtungen für unterstützte SMB-Freigaben mit zusätzlicher SMB-Anmeldung. Passwort ausschließlich im lokalen Schlüsselbund; HTTPS-Lesezugriffe und vorhandene Manager-Zuordnungen bleiben erforderlich. Samba setzt Schreib- und Vererbungsrechte selbst durch. Bestehende Dateien werden unter Beibehaltung ihres Eigentümers und ihrer ACL aktualisiert; vorheriger Inhalt wird mit geprüften Rechten als Server-Rückholstand gesichert. Unterbrochene Schreibvorgänge können einen unvollständigen Serverstand hinterlassen: lokale Datei und Rückholstand behalten, Konflikt prüfen und bewusst auflösen. Kein automatisches Überschreiben abweichender Fassungen.
+Pro Ordner nachträglich änderbar: bei Benutzeranmeldung / Client-Start sowie vor dem Ausschalten synchronisieren. Beim Ausschalten keinen Server wecken; bei Nichterreichbarkeit nach kurzer Prüfung sofort fortfahren. Sonst höchstens 60 Sekunden, zusätzlich begrenzt durch systemd-logind (häufig 5 Sekunden). Der Client muss laufen; erzwungenes Ausschalten wird nicht abgefangen. Fehler und Zeitüberschreitungen bleiben als ausstehend sichtbar. Nächster Start gleicht erneut ab, wenn die Startoption aktiv ist. Neue Paketabhängigkeiten: python3-smbc und libsecret-tools. Windows-Client unverändert.
+
+Linux-Client 0.4.15 / Windows-Client 0.2.11 (10.10.2026): Die 256-MiB-Grenze für Offline-Dateien entfällt, auch größere ISO-Dateien sind möglich. Blockweise Übertragung; Speicherlimit, freier Platz, Rechteprüfung und Zeitlimits gelten weiterhin. Temporäre Serverablagen benötigen die Dateigröße plus 512 MiB Reserve. Links und Spezialdateien bleiben ausgeschlossen.
+
+Linux-Client 0.4.16 (10.10.2026): Bei Auswahl eines Netzwerk-Mounts wird der Offline-Zielpfad aus dessen Ordnerstruktur vorgeschlagen: zwischen übergeordnetem Ordner und Mountnamen wird Offline eingefügt. Der Vorschlag bleibt änderbar. Bestehende Zuordnungen werden beim Öffnen beibehalten; vorhandene Dateien werden nicht automatisch verschoben.
+
+Linux-Client 0.4.17 (10.10.2026): Neuer Button „Alle Server-Unterordner aufnehmen“ wählt nach Bestätigung den gesamten zugewiesenen Serverordner und entfernt Ausschlüsse. Dateien in tieferen Unterordnern werden rekursiv synchronisiert. Zielpfad prüfen und speichern; kein unmittelbarer Sync-Start. Rechteprüfung bleibt bestehen; leere Ordner, Links und separate Unter-Mounts werden nicht übernommen.
+
+Nextcloud-Wake-Korrektur (10.10.2026): Erkannte reine Nextcloud-Desktop-Hintergrundabfragen (DAV-PROPFIND und ausgewählte Status-Endpunkte) wecken nicht mehr und verlängern keinen Schlafblocker. Bei schlafendem Server erhalten sie HTTP 503 mit Wiederholungshinweis. Dateiübertragungen und DAVx5 bleiben geschützt. Andere Clients und unbekannte Anfragen bleiben unverändert; die Erkennung ist keine Authentifizierung.
+
+0.12-66 – 10. Oktober 2026
+- Nextcloud-Wake: Inaktive Vorbereitung speichern, ohne Dienste, DNS, Router oder Zertifikate zu ändern. Getrennte spätere Gateway-Installation.
+- Einstellbarer Statuspfad unterstützt Nextcloud in Unterordnern; DAV-Anfragen und bestehende URLs bleiben unverändert. Blocker-Profil vor Installation erforderlich; WebSockets bleiben ausgeschlossen.
+
 0.12-65 – 7. Oktober 2026
 - Gruppenauswahl: Mitgliedschaften per Häkchen hinzufügen oder entfernen und gemeinsam mit „Gruppen speichern“ übernehmen. Primäre Gruppe geschützt; Administratorpasswort und bei geänderten besonderen Rechten ausdrückliche Bestätigung erforderlich. Veraltete Gruppenauswahl wird abgelehnt.
 - Benutzerverwaltung mit gezielten Gruppenänderungen einschließlich sudo; Schutz gegen Entfernen nicht angezeigter Mitgliedschaften.

@@ -10,8 +10,8 @@ using System.Reflection;
 [assembly: AssemblyTitle("Heimserver Manager Client")]
 [assembly: AssemblyDescription("Windows-Client: Serverbedarf, Wake-on-LAN, Recovery und Statussymbol")]
 [assembly: AssemblyProduct("Heimserver Manager Client")]
-[assembly: AssemblyVersion("0.2.7.0")]
-[assembly: AssemblyFileVersion("0.2.7.0")]
+[assembly: AssemblyVersion("0.2.11.0")]
+[assembly: AssemblyFileVersion("0.2.11.0")]
 namespace HeimserverClient {
     static class Program {
         [STAThread] static void Main(string[] args) {
