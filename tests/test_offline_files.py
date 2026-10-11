@@ -93,7 +93,13 @@ class Files(unittest.TestCase):
      content=data.read() if hasattr(data,'read') else data;server.mutate(fd,path,sha,io.BytesIO(content),len(content),action=='delete',content_sha or None)
    return dict(ok=True,sha=content_sha)
   with patch.object(client,'ROOT',self.root/'state'),patch.object(client,'call',side_effect=api),patch.object(client.core,'load',return_value={}),patch.object(client.core,'validate',return_value=dict(SERVER_URL='https://example.test',TOKEN='test')):
-   client.sync(row);self.assertEqual('first',(local/'doc').read_text());(local/'doc').write_text('local');client.sync(row);self.assertEqual('local',(remote/'doc').read_text())
+   client.sync(row);self.assertEqual('first',(local/'doc').read_text())
+   (local/'doc').unlink();row['write']=False
+   for _ in range(2):
+    client.sync(row);self.assertFalse((local/'doc').exists());self.assertEqual('first',(remote/'doc').read_text())
+   row['write']=True;client.sync(row);self.assertFalse((remote/'doc').exists())
+   (remote/'doc').write_text('first');client.sync(row)
+   (local/'doc').write_text('local');client.sync(row);self.assertEqual('local',(remote/'doc').read_text())
    (remote/'doc').write_text('remote');(local/'doc').write_text('conflict');self.assertIn('doc',client.sync(row));self.assertEqual('remote',(remote/'doc').read_text());self.assertEqual('conflict',(local/'doc').read_text())
    (local/'doc').write_text('remote');client.sync(row);(local/'doc').unlink();client.sync(row);self.assertFalse((remote/'doc').exists());(remote/'doc').write_text('restored');client.sync(row)
    with patch.object(client,'call',side_effect=OSError('offline')):
@@ -169,3 +175,15 @@ class TrayScheduleTests(unittest.TestCase):
  def test_schedule_does_not_resume_manual_release(self):
   with tempfile.TemporaryDirectory() as tmp,patch.object(client,'PAUSE_FILE',Path(tmp)/'paused'),patch.object(client,'config',return_value=[]),patch.object(client,'save_config'):
    client.PAUSE_FILE.write_text('paused');client.set_schedule('interval');self.assertTrue(client.paused())
+
+class LocalDeletionPolicy(unittest.TestCase):
+ def test_known_local_deletion_never_redownloaded(self):
+  for write in (False,True):
+   for delete in (False,True):
+    with self.subTest(write=write,delete=delete):
+     action=client.decision('baseline',None,'baseline',write,delete)
+     self.assertEqual('delete' if write and delete else 'pending-delete',action)
+ def test_no_baseline_downloads_new_server_file(self):
+  self.assertEqual('get',client.decision(None,None,'server',False,False))
+ def test_server_changed_since_local_delete_is_conflict(self):
+  self.assertEqual('conflict',client.decision('baseline',None,'updated',True,True))

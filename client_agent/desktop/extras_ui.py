@@ -34,6 +34,33 @@ def manager_login(app,on_success=None):
         app.run_action(run,on_success=on_success or (lambda:backups(app)))
 
 
+def reauthenticate(app,username,message,job):
+    """Called on the backup worker; only GTK work runs on the main loop."""
+    import threading
+    ready=threading.Event();result=[];dialogs=[]
+    def prompt():
+        if job.event.is_set():ready.set();return False
+        d=Gtk.Dialog(title=tr('Sicherung pausiert – erneut anmelden'),transient_for=app.window,modal=True)
+        dialogs.append(d)
+        d.add_buttons(tr('Übertragung beenden'),Gtk.ResponseType.CANCEL,tr('Anmelden und fortsetzen'),Gtk.ResponseType.OK)
+        box=d.get_content_area();box.set_spacing(8)
+        box.add(Gtk.Label(label=message,wrap=True))
+        user=Gtk.Entry();user.set_text(username);user.set_editable(False);box.add(user)
+        password=Gtk.Entry();password.set_visibility(False);password.set_placeholder_text(tr('Linux-Passwort'));box.add(password)
+        def response(dialog,value):
+            if value==Gtk.ResponseType.OK:result.append((username,password.get_text()))
+            password.set_text('');dialog.destroy();ready.set()
+        d.connect('response',response);d.show_all();password.grab_focus();return False
+    GLib.idle_add(prompt)
+    while not ready.wait(.2):
+        if job.event.is_set():
+            def close():
+                for d in dialogs:d.response(Gtk.ResponseType.CANCEL)
+                return False
+            GLib.idle_add(close);job.check()
+    return result[0] if result else None
+
+
 def pair_device(app):
     if not confirm(app,tr('Eigenes Agentenprofil für dieses Manager-Konto, Gerät und diese lokale Anmeldung erstellen? Bisherige gemeinsame Profile bleiben bestehen.')):return
     def run():

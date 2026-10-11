@@ -30,7 +30,10 @@ class App(Gtk.Application):
         Gtk.Application.do_startup(self);self.hold()
         import offline
         offline.resume()
-        self.make_window();self.make_tray();self.offline_lifecycle=offline_lifecycle.Monitor(self);GLib.timeout_add_seconds(15,self.refresh);self.refresh()
+        self.make_window();self.make_tray();
+        import backup
+        backup.REAUTH_HANDLER=lambda username,message,job:extras_ui.reauthenticate(self,username,message,job)
+        self.offline_lifecycle=offline_lifecycle.Monitor(self);GLib.timeout_add_seconds(15,self.refresh);self.refresh()
     def do_command_line(self,command):
         args=command.get_arguments()
         if '--autostart' in args and not core.CONFIG.exists():self.quit();return 0

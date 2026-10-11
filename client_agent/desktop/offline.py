@@ -79,7 +79,7 @@ def decision(base,local,remote,write,delete):
     if local==base:
         return 'get' if remote else ('trash' if delete else 'pending-delete')
     if remote==base:
-        if local is None:return ('delete' if write and delete else ('get' if not write and remote else 'pending-delete'))
+        if local is None:return 'delete' if write and delete else 'pending-delete'
         return 'put' if write else 'conflict'
     return 'conflict'
 
@@ -160,7 +160,7 @@ def _sync(row,progress):
             action=decision(base.get(n),(local.get(n) or {}).get('sha'),(remote.get(n) or {}).get('sha'),row.get('write',False),row.get('delete',False))
             sizes[n]=(remote[n]['size'] if action=='get' else local[n]['size'] if action=='put' else 0)
         meter=SyncProgress(progress,sum(sizes.values()),len(names))
-        conflicts=[];changed=0
+        conflicts=[];changed=0;pending_deletions=0
         for name in sorted(set(base)|set(local)|set(remote)):
             if not selected(name):continue
             require_running()
@@ -170,6 +170,7 @@ def _sync(row,progress):
             meter.show(name+' · '+action,force=True)
             p=root.joinpath(*relative(name))
             if action in ('conflict','pending-delete'):
+                if action=='pending-delete' and l is None:pending_deletions+=1
                 conflicts.append(name);meter.complete_file(0);continue
             if action=='put':
                 if p.is_symlink() or digest(p)!=l:raise core.Error('Local file changed')
@@ -215,6 +216,8 @@ def _sync(row,progress):
             else:base.pop(name,None)
             core.atomic(state,json.dumps(base))
             meter.complete_file(sizes[name])
+        if pending_deletions:
+            progress(tr('Lokale Löschungen bleiben ausstehend. Für die Weitergabe an den Server beide Optionen aktivieren: Beide Richtungen synchronisieren und Löschungen übernehmen.'))
         if row.get('_require_clean') and conflicts:raise core.Error('Resolve synchronization conflicts before completing this action')
         progress(('100% · '+tr('Abgleich abgeschlossen.')) if not conflicts else tr('Durchlauf beendet; Konflikte bleiben offen.'))
         return ('100% · ' if not conflicts else '')+tr('Abgleich beendet. Änderungen: ')+str(changed)+tr(' · Konflikte / ausstehende Löschungen: ')+str(len(conflicts))+ ('\n'+'\n'.join(conflicts[:30]) if conflicts else '')

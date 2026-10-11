@@ -1,7 +1,7 @@
-HEIMSERVER MANAGER CLIENT – Desktop App 0.2.2
+HEIMSERVER MANAGER CLIENT – Desktop App 0.4.36
 
 Debian 13 / LMDE 7 / Linux Mint 22.x, graphical user session with systemd.
-Installation: sudo apt install ./Heimserver_Manager_Client_0.2.2_all.deb
+Installation: sudo apt install ./Heimserver_Manager_Client_0.4.36_all.deb
 Then open "Home Server Manager Client" in the start menu.
 
 In the manager under Network / Client Agents download the desktop profile of the matching client. In the app, select "Import Profile", verify details, click "Save", and choose "Activate Agent / Take Over". The profile contains THE PERSONAL AGENT TOKEN: do not share or leave it publicly accessible.
@@ -44,14 +44,14 @@ Window construction and program start on the GTK test display were verified.
 Update an existing 0.1.0 package by installing this DEB.
 User settings are preserved.
 
-Client version 0.2.2 – September 30, 2026
+Client version 0.4.32 – September 30, 2026
 The status icon starts automatically upon graphical user login as soon as the client configuration is present—even for previous script-based clients.
 Without configuration, automatic startup remains silent. The agent is thereby not activated and no wake-up action is executed. Manual opening remains possible.
 "Disable Agent" also disables the icon auto-startup for this user.
 "Activate Agent / Take Over" reactivates it.
 
 
-NEW IN CLIENT 0.2.2
+NEW IN CLIENT 0.4.32
 Own file backups and restore in the client; server backups only via renewed manager administrator login in the browser. Private HTTPS with verified root certificate, optional hostname entry, and administrator approval.
 First set up backups in the Manager desktop client security section and use a separate JSON profile per user. File backups are not complete system images.
 Links, special files, ACLs, and operating system state are not fully backed up.
@@ -137,3 +137,21 @@ Restart the client after changing the desktop language. Browser language and
 JSON profiles do not override this setting. Install the new client release;
 exiting settings are preserved. Names, paths, technical logs and external
 program output (including the USB/NFS migration script) remain unchanged.
+
+Client 0.4.32: During an account-authenticated backup, an expired session opens a new sign-in dialog. The running transfer pauses and resumes the same request and upload after sign-in with the same account and server. Uploaded blocks stay intact. Wrong passwords can be retried; revoked permissions do not bypass authorization. Passwords are not stored. Keep the client running while paused. Closing the client or stopping the transfer does not provide automatic recovery after restart; existing incomplete backups are not retroactively resumed.
+
+Client 0.4.33 – October 11, 2026
+- Unattended HTTPS backups use a separate, revocable credential bound to the account, client device and backup run. Active transfers continue after the ordinary login expires, including shared system and personal components. The credential is closed at the end and expires after 24 hours without API activity. Account restrictions still apply. Requires the matching manager update; no passwords are stored. This does not automatically resume previously terminated transfers.
+
+Client 0.4.34 – October 11, 2026
+- Linux HTTPS system backups display estimated progress from 0 to 100 percent, weighted across the new system and personal components. An existing reused system snapshot is excluded from the new workload. Sent and reused blocks both count; server verification is shown separately and 100 percent appears only after successful completion. A metadata scan uses the same mount exclusions; sparse files and archive metadata make the estimate approximate. No temporary local archive is created. The separate USB assistant and simple folder-backup flow are unchanged.
+
+Client 0.4.36 – October 11, 2026
+- Offline files: a known local deletion remains pending instead of being downloaded again when two-way sync or deletion propagation is disabled. Both options are required to delete the server copy. Concurrent server changes remain conflicts; files without a previous sync baseline are treated as new server files. Existing folder settings are not changed automatically.
+
+0.13-3 – October 11, 2026 – Beta
+- Linux client 0.4.36: readability preflight for HTTPS system and personal backups. List inaccessible paths, exclude them for this run only after explicit confirmation, and record exclusions in the inventory. New read errors during transfer still fail the backup. Local per-user exclusions remain supported; packages contain no private exclusions.
+- Show incomplete incremental uploads and retire them after confirmation while preserving blocks and completed snapshots. Read files again and reuse identical blocks. Other devices, running verification, changed uploads and activity within ten minutes prevent retirement. Do not replace paused uploads.
+- Background checksum verification with status polling and verification progress instead of one long HTTP request. Mark complete only after successful verification. A lost connection or service restart leaves completion unconfirmed; do not discard data prematurely.
+- Personal inventory shows the home filesystem and excluded nested mounts. Clear read errors without an additional desktop crash report.
+- Update manager and client together; manager changes require a checked restart. Run-scoped authentication requires the updated running manager. Package builds do not change running services or backups. Windows and simple folder/USB backup modes do not receive these Linux HTTPS extensions.

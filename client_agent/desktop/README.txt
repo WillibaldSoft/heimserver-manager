@@ -1,7 +1,7 @@
-HEIMSERVER MANAGER CLIENT – Desktop-App 0.2.2
+HEIMSERVER MANAGER CLIENT – Desktop-App 0.4.36
 
 Debian 13 / LMDE 7 / Linux Mint 22.x, grafische Benutzersitzung mit systemd.
-Installation: sudo apt install ./Heimserver_Manager_Client_0.2.2_all.deb
+Installation: sudo apt install ./Heimserver_Manager_Client_0.4.36_all.deb
 Danach im Startmenü „Heimserver Manager Client“ öffnen.
 
 Im Manager unter Netzwerk / Client-Agenten das Desktop-Profil des passenden
@@ -49,7 +49,7 @@ Startfehler behoben: Die GTK-Startfunktion wurde durch eine Aktionsmethode
 Ein vorhandenes 0.1.0-Paket durch Installation dieser DEB aktualisieren.
 Benutzereinstellungen bleiben erhalten.
 
-Client-Version 0.2.2 – 30. September 2026
+Client-Version 0.4.32 – 30. September 2026
 Statussymbol startet bei grafischer Benutzeranmeldung automatisch, sobald die
 Client-Konfiguration vorhanden ist – auch bei bisherigen Skript-Clients.
 Ohne Konfiguration bleibt der automatische Start still. Der Agent wird dadurch
@@ -58,7 +58,7 @@ nicht aktiviert und keine Weckaktion ausgeführt. Manuelles Öffnen bleibt mögl
 „Agent aktivieren / übernehmen“ aktiviert ihn wieder.
 
 
-NEU IN CLIENT 0.2.2
+NEU IN CLIENT 0.4.32
 Eigene Dateibackups und Rücksicherung im Client; Server-Backups nur über erneute
 Manager-Administratoranmeldung im Browser. Privates HTTPS mit geprüftem
 Stammzertifikat, optionalem Namenseintrag und Administratorfreigabe.
@@ -178,3 +178,21 @@ Restart the client after changing the desktop language. Browser language and
 JSON profiles do not override this setting. Install the new client release;
 existing settings are preserved. Names, paths, technical logs and external
 program output (including the USB/NFS migration script) remain unchanged.
+
+Client 0.4.32: Bei einer Sicherung mit Konto-Anmeldung öffnet eine abgelaufene Sitzung eine erneute Anmeldung. Die laufende Übertragung pausiert und setzt nach Anmeldung mit demselben Konto und Server dieselbe Anfrage und denselben Auftrag fort. Übertragene Blöcke bleiben erhalten. Falsche Passwörter können erneut eingegeben werden; entzogene Rechte werden nicht umgangen. Passwörter werden nicht gespeichert. Den Client während der Pause geöffnet lassen. Nach Schließen des Clients oder Beenden der Übertragung gibt es keine automatische Fortsetzung nach Neustart; bereits abgebrochene Sicherungen werden nicht nachträglich fortgesetzt.
+
+Client 0.4.33 – 11. Oktober 2026
+- Unbeaufsichtigte HTTPS-Sicherungen erhalten eine eigene widerrufbare Berechtigung für Konto, Client-Gerät und Sicherungslauf. Aktive Übertragungen laufen nach Ablauf der normalen Anmeldung weiter, einschließlich gemeinsamem Systemstand und persönlichen Daten. Die Berechtigung wird am Ende geschlossen und verfällt nach 24 Stunden ohne API-Aktivität. Kontosperren und Rechte gelten weiterhin. Passende Manager-Ergänzung erforderlich; keine Passwortspeicherung. Bereits beendete Übertragungen werden nicht automatisch fortgesetzt.
+
+Client 0.4.34 – 11. Oktober 2026
+- Linux-HTTPS-Systemsicherungen zeigen einen geschätzten Fortschritt von 0 bis 100 Prozent, nach Umfang des neuen Systemstands und der persönlichen Daten gewichtet. Ein wiederverwendeter fertiger Systemstand zählt nicht erneut. Übertragene und wiederverwendete Blöcke zählen; die Serverprüfung wird separat angezeigt, 100 Prozent erst bei erfolgreichem Abschluss. Eine Vorabprüfung der Dateiinformationen berücksichtigt dieselben Mount-Ausschlüsse; Sparse-Dateien und Archivmetadaten machen die Anzeige zu einem Näherungswert. Kein lokales Zwischenarchiv. Separater USB-Assistent und einfache Ordnersicherung unverändert.
+
+Client 0.4.36 – 11. Oktober 2026
+- Offline-Dateien: Eine erkannte lokale Löschung bleibt ausstehend, statt erneut heruntergeladen zu werden, wenn der beidseitige Abgleich oder die Löschweitergabe deaktiviert ist. Beide Optionen sind zum Löschen auf dem Server erforderlich. Zwischenzeitliche Serveränderungen bleiben Konflikte; Dateien ohne bisherigen Abgleichstand gelten als neue Serverdateien. Bestehende Ordnereinstellungen werden nicht automatisch geändert.
+
+0.13-3 – 11. Oktober 2026 – Beta
+- Linux-Client 0.4.36: Vorprüfung der Lesbarkeit für HTTPS-System- und persönliche Sicherungen. Gesperrte Pfade auflisten, nur nach ausdrücklicher Bestätigung für diesen Lauf auslassen und im Inventar dokumentieren. Zusätzliche Lesefehler während der Übertragung bleiben Fehler. Lokale benutzerspezifische Ausnahmen bleiben möglich; keine privaten Ausnahmen im Paket.
+- Unvollständige inkrementelle Aufträge im Ablauf anzeigen und nach Bestätigung zurücklegen; vorhandene Blöcke und fertige Stände bleiben erhalten. Neu einlesen und identische Blöcke wiederverwenden. Fremde Geräte, laufende Prüfungen, geänderte Aufträge und Aktivität in den letzten zehn Minuten verhindern die Freigabe. Pausierte Aufträge nicht ersetzen.
+- Prüfsummenabschluss im Hintergrund mit Statusabfragen und Prüffortschritt statt langer einzelner HTTP-Anfrage. Erst nach erfolgreicher Prüfung als abgeschlossen markieren. Bei Verbindungsabbruch oder Dienstneustart bleibt der Abschluss unbestätigt; Daten nicht vorschnell verwerfen.
+- Persönliches Inventar zeigt den Home-Datenträger und ausgeschlossene Unter-Mounts. Verständliche Lesefehler ohne zusätzlichen Desktop-Absturzbericht.
+- Manager und Client gemeinsam aktualisieren; der Manager lädt Änderungen erst nach geprüftem Neustart. Die auftragsgebundene Anmeldung benötigt den neuen laufenden Manager. Bestehende Dienste und Sicherungen werden beim Paketbau nicht verändert. Windows und einfacher Ordner-/USB-Sicherungsmodus erhalten diese Linux-HTTPS-Erweiterungen nicht.

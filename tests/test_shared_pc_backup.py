@@ -71,7 +71,7 @@ class Components(unittest.TestCase):
    self.assertIn('./home/alice/.config/data',names);self.assertNotIn('./etc/config',names);self.assertNotIn('./home/bob/secret',names);self.assertNotIn('./home/alice/share/secret',names)
  def test_workflow_reuses_system_and_keeps_personal_reference(self):
   state=dict(device_id='a'*64,system=dict(id='b'*32,created='date'),system_admin=False)
-  with patch.object(backup,'call',side_effect=[{'capabilities':['shared-pc-v1']},state]),patch.object(system_https,'create_component',return_value=('c'*32,'done')) as create:
+  with patch.object(backup,'call',side_effect=[{'capabilities':['shared-pc-v1']},state]),patch.object(system_https,'create_component',return_value=('c'*32,'done')) as create,patch.object(system_https,'prepare_inventory',return_value={'archive_estimate':{'bytes':100}}),patch.object(system_https,'check_sources',side_effect=lambda options,*args:options):
    result=system_https.create()
    self.assertEqual(1,create.call_count);self.assertEqual('personal',create.call_args.args[1]['component']);self.assertEqual('b'*32,create.call_args.args[-1]);self.assertIn('done',result)
  def test_refresh_requires_admin(self):
@@ -130,3 +130,78 @@ class DelegatedSystemBackup(SharedPC):
   self.assertNotEqual(200,self.request('list',user='2'*64).status_code)
   self.login('bob')
   self.assertEqual(403,self.request('download&id='+sid+'&pc='+'a'*64,user='2'*64).status_code)
+
+class PersonalErrors(unittest.TestCase):
+ def test_permission_failure_reports_path_without_crash_handler(self):
+  import io,contextlib
+  output=io.StringIO()
+  with patch.object(system_stream,'main',side_effect=PermissionError(13,'denied','/home/test/private')),contextlib.redirect_stderr(output),self.assertRaises(SystemExit) as result:
+   system_stream.cli()
+  self.assertEqual(1,result.exception.code);self.assertIn('/home/test/private',output.getvalue());self.assertNotIn('Traceback',output.getvalue())
+ def test_personal_inventory_lists_home_device_and_excluded_nested_mount(self):
+  rows=[dict(target='/',fstype='ext4'),dict(target='/home',fstype='ext4'),dict(target='/home/alice/share',fstype='cifs'),dict(target='/mnt/other',fstype='ext4')]
+  with patch.object(system_stream,'personal_user',return_value=SimpleNamespace(pw_dir='/home/alice',pw_name='alice')),patch.object(system_stream,'mounts',return_value=rows),patch.object(system_stream,'capture',return_value={}):
+   result=system_stream.personal_inventory()
+  self.assertEqual([rows[1]],result['selected_mounts']);self.assertEqual([rows[2]],result['excluded_mounts'])
+ def test_explicit_exclusion_pruned_before_probing_unreadable_directory(self):
+  with tempfile.TemporaryDirectory() as tmp:
+   root=Path(tmp);home=root/'home/alice';(home/'excluded').mkdir(parents=True);(home/'kept').write_text('data')
+   original=Path.is_file
+   def probe(path):
+    if 'excluded' in path.parts:raise PermissionError(13,'denied',str(path))
+    return original(path)
+   with patch.object(system_stream,'personal_user',return_value=SimpleNamespace(pw_dir='/home/alice')),patch.object(system_stream,'personal_exclusions',return_value=['/home/alice/excluded']),patch.object(Path,'is_file',probe):
+    result=list(system_stream.file_names(root,{'component':'personal'},[dict(target='/',fstype='ext4')]))
+   self.assertIn('./home/alice/kept',result);self.assertNotIn('./home/alice/excluded',result)
+ def test_unreadable_nonexcluded_directory_still_fails(self):
+  with tempfile.TemporaryDirectory() as tmp:
+   root=Path(tmp);(root/'home/alice/private').mkdir(parents=True)
+   def probe(path):raise PermissionError(13,'denied',str(path))
+   with patch.object(system_stream,'personal_user',return_value=SimpleNamespace(pw_dir='/home/alice')),patch.object(system_stream,'personal_exclusions',return_value=[]),patch.object(Path,'is_file',probe),self.assertRaises(PermissionError):
+    list(system_stream.file_names(root,{'component':'personal'},[dict(target='/',fstype='ext4')]))
+
+class Preflight(unittest.TestCase):
+ def test_denied_paths_require_confirmation_before_inventory_or_upload(self):
+  from subprocess import CompletedProcess
+  rows=[{'path':'/home/alice/private','reason':'denied'}]
+  with patch.object(system_https,'inventory_helper',return_value=CompletedProcess([],0,json.dumps({'blocked':rows}).encode(),b'')):
+   for confirm in (None,lambda report:False):
+    with self.assertRaises(Exception):system_https.check_sources({'component':'personal'},confirm,lambda text:None)
+   result=system_https.check_sources({'component':'personal'},lambda report:report==rows,lambda text:None)
+   self.assertEqual(['/home/alice/private'],result['approved_exclusions'])
+ def test_collects_multiple_denied_folders_and_still_checks_readable_files(self):
+  with tempfile.TemporaryDirectory() as tmp:
+   root=Path(tmp);home=root/'home/alice';home.mkdir(parents=True)
+   for name in ('blocked1','blocked2'):(home/name).mkdir()
+   (home/'normal').write_text('data');original=Path.is_file
+   def probe(path):
+    if any(n.startswith('blocked') for n in path.parts):raise PermissionError(13,'denied',str(path))
+    return original(path)
+   with patch.object(system_stream,'source_root',return_value=root),patch.object(system_stream,'mounts',return_value=[]),patch.object(system_stream,'personal_user',return_value=SimpleNamespace(pw_dir='/home/alice')),patch.object(system_stream,'personal_exclusions',return_value=[]),patch.object(Path,'is_file',probe):
+    report=system_stream.preflight({'component':'personal'})
+   self.assertEqual({'/home/alice/blocked1','/home/alice/blocked2'},{r['path'] for r in report['blocked']})
+ def test_refuses_unsafe_approved_exclusions(self):
+  for path in ('/','relative','/home/../etc'):
+   with self.assertRaises(ValueError):system_stream.approved_exclusions({'approved_exclusions':[path]})
+
+class Interrupted(SharedPC):
+ def test_retire_requires_idle_confirmation_and_keeps_blocks(self):
+  import time
+  self.setup_shared();sid=self.request('cas-begin&personal=1',dict(personal_user='alice',personal_home='/home/alice')).json['id']
+  folder=next(self.root.rglob('.upload-'+sid));blocks=folder.parent/'.blocks';blocks.mkdir(exist_ok=True);(blocks/'kept').write_bytes(b'data')
+  row=self.request('cas-pending&personal=1').json['uploads'][0]
+  data=dict(id=sid,revision=row['revision'],confirmed=True)
+  self.assertEqual(400,self.request('cas-retire&personal=1',data).status_code)
+  os.utime(folder,(time.time()-700,time.time()-700))
+  row=self.request('cas-pending&personal=1').json['uploads'][0];data['revision']=row['revision']
+  self.assertEqual(400,self.request('cas-retire&personal=1',dict(data,confirmed=False)).status_code)
+  self.assertEqual(200,self.request('cas-retire&personal=1',data).status_code)
+  self.assertFalse(folder.exists());self.assertTrue((folder.parent/('.interrupted-'+sid)).exists());self.assertEqual(b'data',(blocks/'kept').read_bytes())
+  self.assertEqual(200,self.request('cas-begin&personal=1',dict(personal_user='alice',personal_home='/home/alice')).status_code)
+ def test_changed_upload_and_foreign_device_cannot_retire(self):
+  import time
+  self.setup_shared();sid=self.request('cas-begin&personal=1',dict(personal_user='alice',personal_home='/home/alice')).json['id']
+  folder=next(self.root.rglob('.upload-'+sid));os.utime(folder,(time.time()-700,time.time()-700))
+  row=self.request('cas-pending&personal=1').json['uploads'][0];data=dict(id=sid,revision=row['revision'],confirmed=True)
+  self.assertEqual(400,self.request('cas-retire&personal=1',data,device='b'*64).status_code)
+  os.utime(folder,None);self.assertEqual(400,self.request('cas-retire&personal=1',data).status_code);self.assertTrue(folder.exists())

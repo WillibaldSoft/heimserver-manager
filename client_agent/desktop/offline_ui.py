@@ -75,6 +75,7 @@ def show(app):
     for label,fn in [('SMB-Anmeldung einrichten / ändern',lambda:smb_login()),('SMB-Anmeldung entfernen',lambda:smb_login(True))]:
         b=Gtk.Button(label=tr(label));b.connect('clicked',lambda _,f=fn:f());box.add(b)
     delete=Gtk.CheckButton(label=tr('Löschungen übernehmen (mit Rückholablage)'));box.add(delete)
+    box.add(Gtk.Label(label=tr('Lokale Löschungen werden nur mit beiden Optionen an den Server übertragen. Sonst bleiben sie ausstehend und werden nicht automatisch wiederhergestellt.'),wrap=True))
     wake=Gtk.CheckButton(label=tr('Server vor dem Abgleich wecken'));box.add(wake)
     box.add(Gtk.Label(label=tr('Intervall in Minuten: 0 = nur manuell. Automatik läuft bei geöffnetem Client / Statussymbol.'),wrap=True))
     interval=Gtk.SpinButton.new_with_range(0,1440,5);box.add(interval)

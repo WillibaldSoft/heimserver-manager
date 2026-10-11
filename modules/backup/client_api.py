@@ -2,7 +2,7 @@
 from ui_translation import html_literal as _ui_html, text as _ui_text
 import contextlib,datetime,fcntl,hashlib,json,os,re,shutil,time,uuid,tempfile,threading,html,subprocess
 from pathlib import Path
-from flask import request,jsonify,send_file,session,after_this_request,g,redirect
+from flask import current_app, request,jsonify,send_file,session,after_this_request,g,redirect
 import server_settings
 CHUNK=4*1024*1024
 RESERVE=2*1024**3
@@ -128,9 +128,17 @@ def register(app,ctx):
         if agent is None:return jsonify(error='Client-Anmeldung erforderlich.'),401
         try:
             conf=guard();quota=int(conf.get('quota_gib',100))*1024**3
-            root=base(agent['id']);action=request.args.get('action','list')
+            action=request.args.get('action','list')
+            if action=='session-begin' and request.method=='POST' and request.path=='/api/account/backup':
+                auth={k:session[k] for k in ('auth_kind','auth_user','auth_revision','auth_uid','auth_stamp') if k in session}
+                token=current_app.extensions['backup_leases'].issue(auth,request.headers.get('X-HSM-Device',''),request.headers.get('X-HSM-User',''))
+                return jsonify(token=token)
+            if action=='session-end' and request.method=='POST' and getattr(g,'backup_session',None):
+                current_app.extensions['backup_leases'].close(g.backup_session)
+                return jsonify(ok=True)
+            root=base(agent['id'])
             if request.method=='POST':
-                limit=32*1024**2 if action=='cas-finish' else (CHUNK if action in ('part','block-put') else 65536)
+                limit=32*1024**2 if action in ('cas-finish','cas-finalize') else (CHUNK if action in ('part','block-put') else 65536)
                 if request.content_length is None or not 0<=request.content_length<=limit:raise ValueError('Anfragegröße fehlt oder ist zu groß.')
             activity=uuid.uuid4().hex;ACTIVE[activity]=True
             @after_this_request
@@ -142,6 +150,9 @@ def register(app,ctx):
                     # JSON/control requests are finished now; only streamed archives
                     # must hold the lease until the response is closed.
                     ACTIVE.pop(activity,None)
+                if getattr(g,'backup_session',None) and action in ('begin','cas-begin') and response.status_code==200:
+                    result=response.get_json(silent=True) or {}
+                    if result.get('id'):current_app.extensions['backup_leases'].remember(g.backup_session,result['id'],request.args.get('pc',''),request.args.get('personal',''))
                 response.headers['Cache-Control']='no-store'
                 return response
             from . import chunks,shared_pc
@@ -150,7 +161,7 @@ def register(app,ctx):
             if pc:
                 if not shared_pc.admin():return jsonify(error='Gemeinsamer Systemstand: Manager-Administrator oder Benutzer mit Systemsicherungsfreigabe anmelden.'),403
                 root=shared_pc.root(sys.modules[__name__],pc)
-                if action not in ('list','download','cancel','abort','cas-begin','cas-finish','block-has','block-put'):raise ValueError('Unbekannte PC-Sicherungsaktion.')
+                if action not in ('list','download','cancel','abort','cas-begin','cas-finish','cas-finalize','cas-status','cas-pending','cas-retire','block-has','block-put'):raise ValueError('Unbekannte PC-Sicherungsaktion.')
             if action=='pc-status' and request.method=='GET':return jsonify(shared_pc.status(sys.modules[__name__],ctx,agent))
             g.backup_component=shared_pc.metadata(sys.modules[__name__],ctx,agent,pc) if action=='cas-begin' else {}
             if action=='abort' and request.method=='POST':return jsonify(abort_one(root,identifier(request.args.get('id'))))
@@ -163,7 +174,7 @@ def register(app,ctx):
                         rows.extend(dict(row,source_agent=aid,source_label=row.get('source_host') or label) for row in listing(location))
                     if not pc:rows.extend(shared_pc.visible(sys.modules[__name__]))
                     else:rows=[dict(row,shared_pc=pc) for row in rows]
-                    return jsonify(backups=sorted(rows,key=lambda r:r['created'],reverse=True),quota_bytes=quota,scope='own-account' if request.path=='/api/account/backup' else 'own-client',capabilities=['stream-zip-v1','system-cas-v1','own-pc-restore-v1','shared-pc-v1'])
+                    return jsonify(backups=sorted(rows,key=lambda r:r['created'],reverse=True),quota_bytes=quota,scope='own-account' if request.path=='/api/account/backup' else 'own-client',capabilities=['stream-zip-v1','system-cas-v1','own-pc-restore-v1','shared-pc-v1','backup-session-v1','async-finalize-v1','retire-incomplete-v1'])
                 if action=='download':
                     aid=int(request.args.get('source_agent','0'))
                     if pc and aid:raise ValueError('Ungültige gemeinsame Sicherungsquelle.')

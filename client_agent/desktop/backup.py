@@ -15,10 +15,12 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 # Account cookies stay in memory only and are bound to this exact server URL.
 ACCOUNT=None
 ACCOUNT_REQUIRED=False
+REAUTH_HANDLER=None
 
 class Cancelled(core.Error):pass
+class AuthenticationExpired(core.Error):pass
 class BackupJob:
-    def __init__(self):self.event=threading.Event();self.callbacks=[]
+    def __init__(self):self.event=threading.Event();self.callbacks=[];self.thread=threading.get_ident();self.reauth_stopped=False;self.lease=None;self.lease_checked=False
     def check(self):
         if self.event.is_set():raise Cancelled(tr('Sicherung abgebrochen.'))
     def cancel(self):
@@ -44,6 +46,9 @@ def cancellable(fn):
             CURRENT_BACKUP=BackupJob()
         try:return fn(*args,**kwargs)
         finally:
+            if CURRENT_BACKUP.lease:
+                try:_call_once('session-end',{})
+                except (core.Error,OSError):pass
             with BACKUP_LOCK:CURRENT_BACKUP=None
     return run
 def watch_upload(call,sid):
@@ -73,7 +78,9 @@ def account_login(username,password):
     from html.parser import HTMLParser
     cfg=core.validate(core.load());url=cfg['SERVER_URL']
     if not url.startswith('https://'):raise core.Error(tr('Manager-Anmeldung benötigt HTTPS mit gültigem Zertifikat.'))
-    account_logout()
+    previous=ACCOUNT
+    if CURRENT_BACKUP and previous and (previous[0]!=url or previous[2]['username']!=username):
+        raise core.Error(tr('Während einer Sicherung dasselbe Konto und denselben Server verwenden.'))
     opener=urllib.request.build_opener(NoRedirect,urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
     class Form(HTMLParser):
         csrf=''
@@ -93,10 +100,50 @@ def account_login(username,password):
     try:
         with opener.open(url+'/api/account/access',timeout=30) as response:access=json.load(response)
     except urllib.error.HTTPError:raise core.Error(tr('Client-Sicherungen sind für dieses Konto nicht freigegeben.')) from None
+    if CURRENT_BACKUP and previous and access['username']!=previous[2]['username']:
+        raise core.Error(tr('Während einer Sicherung dasselbe Konto und denselben Server verwenden.'))
     ACCOUNT=(url,opener,access)
+    ACCOUNT_REQUIRED=False
     return access
 
 def call(action,data=None,query='',binary=False):
+    original=ACCOUNT
+    job=CURRENT_BACKUP
+    if original and job and job.thread==threading.get_ident() and not job.lease_checked:
+        job.lease_checked=True
+        capabilities=_call_once('list').get('capabilities',[])
+        if 'backup-session-v1' in capabilities:
+            job.lease=_call_once('session-begin',{})['token']
+    try:return _call_once(action,data,query,binary)
+    except AuthenticationExpired:
+        job=CURRENT_BACKUP
+        if not (original and job and job.thread==threading.get_ident() and not job.reauth_stopped and REAUTH_HANDLER):raise
+        job.lease=None
+        server,_,access=original
+        message=tr('Sicherung pausiert: Anmeldung abgelaufen. Mit demselben Konto anmelden; bereits übertragene Blöcke bleiben erhalten.')
+        while True:
+            job.check()
+            credentials=REAUTH_HANDLER(access['username'],message,job)
+            job.check()
+            if credentials is None:
+                job.reauth_stopped=True
+                raise core.Error(tr('Sicherung nicht fortgesetzt. Unvollständiger Serverstand bleibt erhalten.'))
+            if core.validate(core.load())['SERVER_URL']!=server:
+                raise core.Error(tr('Server geändert. Sicherung nicht fortgesetzt.'))
+            try:
+                account_login(*credentials)
+            except core.Error as exc:
+                message=str(exc);continue
+            finally:
+                credentials=None
+            if ACCOUNT[0]!=server or ACCOUNT[2]['username']!=access['username']:
+                raise core.Error(tr('Während einer Sicherung dasselbe Konto und denselben Server verwenden.'))
+            job.check()
+            # A 401 rejects the request before backup mutation. Retry exactly
+            # that request once, with fresh CSRF and the unchanged upload id.
+            return _call_once(action,data,query,binary)
+
+def _call_once(action,data=None,query='',binary=False):
     cfg=core.validate(core.load());url=cfg['SERVER_URL'];headers={}
     if ACCOUNT:
         server,opener,access=ACCOUNT
@@ -105,6 +152,7 @@ def call(action,data=None,query='',binary=False):
             import device_identity
             headers.update(device_identity.headers())
         path='/api/account/backup';headers['X-Server-Manager-CSRF']=access['csrf']
+        if CURRENT_BACKUP and CURRENT_BACKUP.lease:headers['X-HSM-Backup-Session']=CURRENT_BACKUP.lease
         if data is not None and not access.get('backup'):raise core.Error(tr('Nur Lesen: Sicherung nicht freigegeben.'))
     else:
         if ACCOUNT_REQUIRED:raise core.Error(tr('Bitte zuerst wieder am Manager anmelden.'))
@@ -118,14 +166,14 @@ def call(action,data=None,query='',binary=False):
     elif data is not None:headers['Content-Type']='application/octet-stream'
     req=urllib.request.Request(url+path+'?action='+action+query,data,headers)
     try:
-        response=opener.open(req,timeout=300)
+        response=opener.open(req,timeout=15 if action=='cas-status' else 300)
         if binary:return response
         with response:return json.load(response)
     except urllib.error.HTTPError as e:
         try:message=json.loads(e.read(4096)).get('error',tr('Anfrage abgelehnt.'))
         except Exception:message=tr('Anfrage abgelehnt (HTTP ')+str(e.code)+').'
         if ACCOUNT:
-            if e.code==401:message=tr('Anmeldung abgelaufen. Erneut am Manager anmelden.')
+            if e.code==401:raise AuthenticationExpired(tr('Anmeldung abgelaufen. Erneut am Manager anmelden.')) from None
             elif message=='permission_denied':message=tr('Diese Aktion ist für dein Konto nicht freigegeben.')
             elif message in ('cross_origin_request','csrf_required'):message=tr('Sicherheitsprüfung der Anfrage fehlgeschlagen. Client aktualisieren und erneut anmelden.')
         raise core.Error(message) from None

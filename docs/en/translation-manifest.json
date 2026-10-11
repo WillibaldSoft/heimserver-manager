@@ -1,8 +1,8 @@
 {
   "CHANGELOG.md": {
     "english": "docs/en/CHANGELOG.md",
-    "english_sha256": "a0db5a62383f35a082ab575976b9e63e31d14b02cb1a306a4060230449704d1b",
-    "source_sha256": "cebb6067926df755813170629e708fbfa4070cecfc1a5937ffed9c443a8b780c"
+    "english_sha256": "cd5e96f9d590fd4c1b1b610d35f95e5a57ba709fe42b242098dcc931566b802e",
+    "source_sha256": "377ea41ee2277ef622a0b266fbfa916a2fe6813c20cb778bdb893ff0a979442c"
   },
   "LICENSE_NOTICE.md": {
     "english": "docs/en/LICENSE_NOTICE.md",
@@ -21,8 +21,8 @@
   },
   "client_agent/desktop/README.txt": {
     "english": "docs/en/client_agent/desktop/README.txt",
-    "english_sha256": "809360b98bb50f05b780b8439c919452bdbf8cb7788e44251d835be8e08018d8",
-    "source_sha256": "dee6f837d3ec96b912169d2199ec372bc7a18ddd81144e42306d879fb163b1a2"
+    "english_sha256": "f372f1714d69637e40a3f8ecd1200a593e517847294d041d4732ddc889c308b2",
+    "source_sha256": "4a3bc03faeba077097104fdb1494fbd2327add570ef7ce6cc069f1f625b0b1c0"
   },
   "client_agent/windows/README.txt": {
     "english": "docs/en/client_agent/windows/README.txt",
@@ -176,13 +176,13 @@
   },
   "docs/Heimserver_Manager_Funktionsuebersicht.txt": {
     "english": "docs/en/Home_Server_Manager_Features.txt",
-    "english_sha256": "6aef463452e0849943300b397c65ebbd479096732e6771f138e53c46435104fd",
-    "source_sha256": "f675a47248b44d976596a5ddd9171af348bb0b6a3c5d83dacf1637697ba9ed3c"
+    "english_sha256": "49ba7064aae11980f9f23bf73d61a6082fd264d52f7657b91fcb904e2df0f838",
+    "source_sha256": "f4132e90f3797675ab85d13d049569984eb9304451ea93b4ac12ebfd95740bd9"
   },
   "docs/Heimserver_Manager_Versionsaenderungen.txt": {
     "english": "docs/en/Home_Server_Manager_Version_History.txt",
-    "english_sha256": "48b8db65be4427f0b6f924c05425fbd4659e93c90d450da34dc599ad98d5d074",
-    "source_sha256": "f7779c34c856a1a8dd9b9f14f232a4a23479b071512b9b3df9079682ae8f0c59"
+    "english_sha256": "0fa7ee9d02bb136776941893a13f61ad89bb5b6f422e2a8fd407dc97a7b3e532",
+    "source_sha256": "fb19a40ada18a4dd87479e7ac8c8c7df0ec331478a60eb5eac5026250acb380c"
   },
   "docs/Installer.md": {
     "english": "docs/en/Installer.md",
@@ -258,11 +258,6 @@
     "english": "docs/en/RELEASE_PRIVACY.md",
     "english_sha256": "002fe07bab03cbb66ac57ec61d69485332dcafe04a4fcc2a5b45498fd15c8a9d",
     "source_sha256": "52a57051cc6d847cd65508419bce38823a02a160f5598cad933c414167c025a5"
-  },
-  "docs/SCREENSHOTS.md": {
-    "english": "docs/en/SCREENSHOTS.md",
-    "english_sha256": "0c56e4649ea22f559e9b55bde06f21af7fe96148299abdbf29785d1238e9550d",
-    "source_sha256": "e2f63227f6ccba3d09842c4e355c061198d027884624d4eaab5af62762b66a50"
   },
   "docs/SERVER_PATHS.md": {
     "english": "docs/en/SERVER_PATHS.md",

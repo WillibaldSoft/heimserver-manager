@@ -3,6 +3,7 @@ try:
     from client_i18n import tr
 except ModuleNotFoundError:
     from client_agent.desktop.client_i18n import tr
+import re
 import json,subprocess,threading
 from pathlib import Path
 from gi.repository import Gtk,GLib
@@ -54,6 +55,7 @@ def open_dialog(app):
     box.add(Gtk.Label(label=tr('HTTPS: vorhandenen Systemstand prüfen, danach eigene persönliche Daten sichern. Neue Systemstände erfordern Administratorrechte im Manager oder die Benutzerfreigabe für Systemsicherungen. Datenbanken/VMs/Container vorher geordnet stoppen.'),wrap=True))
     scroll=Gtk.ScrolledWindow();scroll.set_vexpand(True);scroll.set_size_request(-1,150)
     view=Gtk.TextView(editable=False,wrap_mode=Gtk.WrapMode.WORD_CHAR);scroll.add(view);box.pack_start(scroll,True,True,0)
+    meter=Gtk.ProgressBar(show_text=True);meter.set_text(tr('Sicherungsumfang noch nicht ermittelt'));box.add(meter)
     start=Gtk.Button(label=tr('USB/NFS-Assistent – lokale oder eingehängte Ablage'));box.add(start)
     state={'busy':False}
     cancel=Gtk.Button(label=tr('Sicherung abbrechen'));cancel.set_sensitive(False);box.add(cancel)
@@ -68,6 +70,12 @@ def open_dialog(app):
         return dialog.get_visible()
     GLib.timeout_add(250,cancel_state)
     def append(text):
+        if text.startswith(tr('Sicherungsumfang ermitteln …')):meter.set_fraction(0);meter.set_text(tr('Sicherungsumfang ermitteln …'))
+        if text.startswith(tr('Fortschritt nach Umfang (ca.): ')) or text.startswith(tr('Sicherung erfolgreich abgeschlossen: 100 %')):
+            match=re.search(r'(\d+) %',text)
+            if match:meter.set_fraction(int(match.group(1))/100);meter.set_text(text.strip())
+        if text.startswith(tr('Sicherungsstand am Server prüfen …')):meter.set_text(tr('Sicherungsstand am Server prüfen …'))
+        if text.startswith(tr('Serverprüfung: ')):meter.set_text(text.strip())
         buf=view.get_buffer();buf.insert(buf.get_end_iter(),text)
         view.scroll_to_iter(buf.get_end_iter(),0,False,0,0)
         return False
@@ -132,6 +140,7 @@ def open_dialog(app):
     box.reorder_child(server,1)
     def server_start(_):
         if app.busy or state['busy']:return
+        meter.set_fraction(0);meter.set_text(tr('Sicherungsumfang noch nicht ermittelt'))
         if not full.get_active():
             import extras_ui,backup
             if extras_ui.confirm(app,tr('Nur eigene Home-Daten auf den Server sichern? Eingebundene Laufwerke und Serverfreigaben bleiben ausgeschlossen. Dies ist eine Dateisicherung, keine Systemsicherung.')):
@@ -149,10 +158,39 @@ def open_dialog(app):
         append(tr('HTTPS-Sicherung: Verbindung zum Manager prüfen; kein lokaler Zielordner erforderlich.\n'))
         options={'source_root':source.get_text().strip() or '/','extra_mounts':[p.strip() for p in extra.get_text().split(';') if p.strip()],'network_profiles':private.get_active(),'refresh_system':refresh.get_active()}
         state['busy']=True;login.set_sensitive(False);close.set_sensitive(False);start.set_sensitive(False);server.set_sensitive(False);restore.set_sensitive(False)
+        def confirm_exclusions(rows):
+            event=threading.Event();answer=[]
+            def show():
+                question=Gtk.Dialog(title=tr('Nicht lesbare Sicherungsquellen'),transient_for=dialog,modal=True)
+                question.add_button(tr('Abbrechen'),Gtk.ResponseType.CANCEL)
+                question.add_button(tr('Aufgelistete Pfade nicht sichern'),Gtk.ResponseType.OK)
+                question.set_default_response(Gtk.ResponseType.CANCEL);question.set_default_size(720,420)
+                content=question.get_content_area()
+                label=Gtk.Label(label=tr('Diese Dateien und Ordner einschließlich ihrer Inhalte fehlen in dieser Sicherung. Nur für diesen Lauf ausschließen und fortfahren?'));label.set_line_wrap(True);content.add(label)
+                scroll=Gtk.ScrolledWindow();scroll.set_vexpand(True)
+                report=Gtk.TextView();report.set_editable(False);report.get_buffer().set_text('\n\n'.join(r['path']+'\n'+r['reason'] for r in rows));scroll.add(report);content.add(scroll)
+                question.show_all();answer.append(question.run()==Gtk.ResponseType.OK);question.destroy();event.set();return False
+            GLib.idle_add(show)
+            while not event.wait(.2):
+                import backup
+                backup.check_cancel()
+            return bool(answer and answer[0])
+        def confirm_interrupted(row):
+            event=threading.Event();answer=[]
+            def show():
+                question=Gtk.MessageDialog(transient_for=dialog,modal=True,message_type=Gtk.MessageType.QUESTION,buttons=Gtk.ButtonsType.OK_CANCEL,text=tr('Unvollständige Sicherung zurücklegen und neu starten?'))
+                question.format_secondary_text(str(row.get('name',''))+'\n'+str(row['created'])+'\n'+str(row['id'])+'\n\n'+tr('Nur bestätigen, wenn der vorherige Lauf beendet ist. Eine zur Anmeldung pausierte Sicherung nicht ersetzen. Fertige Stände und übertragene Datenblöcke bleiben erhalten; Dateien werden neu eingelesen.'))
+                question.set_default_response(Gtk.ResponseType.CANCEL)
+                answer.append(question.run()==Gtk.ResponseType.OK);question.destroy();event.set();return False
+            GLib.idle_add(show)
+            while not event.wait(.2):
+                import backup
+                backup.check_cancel()
+            return bool(answer and answer[0])
         def task():
             try:
                 from system_https import create
-                text=create(lambda value:GLib.idle_add(append,value+'\n'),options=options)
+                text=create(lambda value:GLib.idle_add(append,value+'\n'),options=options,confirm_exclusions=confirm_exclusions,confirm_interrupted=confirm_interrupted)
             except Exception as exc:text=str(exc)
             GLib.idle_add(finish,text);GLib.idle_add(server.set_sensitive,True)
         threading.Thread(target=task,daemon=True).start()

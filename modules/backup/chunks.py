@@ -36,6 +36,15 @@ def iterate(root,m,direct):
     if total.hexdigest()!=m['sha256']:raise ValueError('Sicherungsstand beschädigt.')
 
 def handle(root,action,quota,api):
+    if action in ('cas-pending','cas-retire'):
+        from . import interrupted
+        return interrupted.handle(root,action,api)
+    if action in ('cas-finalize','cas-status'):
+        from . import finalize
+        sid=api.identifier(request.args.get('id'))
+        if action=='cas-status' and request.method=='GET':return jsonify(finalize.status(root,sid,api))
+        if action=='cas-finalize' and request.method=='POST':return jsonify(finalize.start(root,sid,request.get_json(),api)),202
+        raise ValueError('Invalid finalization method')
     if request.method=='GET':
         if action=='block-has':
             if request.args.get('id'):
@@ -50,8 +59,6 @@ def handle(root,action,quota,api):
         raise ValueError('Unbekannte Blockaktion.')
     with api.locked(root):
         if action=='cas-begin':
-            for old in root.glob('.upload-*'):
-                if not old.is_symlink() and time.time()-old.stat().st_mtime>86400:shutil.rmtree(old)
             if list(root.glob('.upload-*')):raise ValueError('Unvollständige Übertragung vorhanden. Zuerst im Client verwerfen oder abschließen.')
             if len(api.listing(root))>=500:raise ValueError('Maximal 500 Sicherungsstände erreicht.')
             sid=uuid.uuid4().hex;folder=root/('.upload-'+sid);folder.mkdir(mode=0o700)

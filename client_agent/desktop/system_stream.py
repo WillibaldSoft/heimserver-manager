@@ -3,6 +3,7 @@ try:
     from client_i18n import tr
 except ModuleNotFoundError:
     from client_agent.desktop.client_i18n import tr
+import stat
 import json,os,pwd,grp,shutil,subprocess,sys,tempfile,threading,signal,time
 from pathlib import Path
 CANCELLED=threading.Event()
@@ -67,10 +68,13 @@ def personal_user():
     return user
 
 def personal_inventory():
-    user=personal_user()
+    user=personal_user();rows=mounts();home=Path(user.pw_dir)
+    parents=[r for r in rows if home==Path(r['target']) or Path(r['target']) in home.parents]
+    containing=max(parents,key=lambda r:len(Path(r['target']).parts),default=None)
+    excluded=[r for r in rows if Path(r['target'])!=home and Path(r['target']).is_relative_to(home)]
     return dict(format='linux-system-inventory-v1',component='personal',architecture=os.uname().machine,
         os_release=Path('/etc/os-release').read_text(),personal_home=user.pw_dir,personal_user=user.pw_name,
-        selected_mounts=[],excluded_mounts=[],commands={},users={user.pw_name:{key:capture(argv) for key,argv in {
+        selected_mounts=[containing] if containing else [],excluded_mounts=excluded,commands={},users={user.pw_name:{key:capture(argv) for key,argv in {
         'flatpak-apps':['flatpak','list','--user','--columns=ref,origin'],
         'flatpak-remotes':['flatpak','remotes','--user','--columns=name,url'],
         'pip':['python3','-m','pip','list','--user','--format=freeze'],
@@ -222,7 +226,43 @@ def inventory(options):
     result['limitations']=['No automatic partitioning or bootloader installation','Live databases/VMs require shutdown or application-consistent backups','Network profiles only if explicitly selected','Cross-distribution migration uses target packages; binary system restore requires the same platform']
     return result
 
-def file_names(source,options,rows):
+def personal_exclusions():
+    """Explicit per-user exclusions, relative to that user's home only."""
+    home=Path(personal_user().pw_dir)
+    config=home/'.config/server-manager-client/backup-exclusions.json'
+    if not config.exists():return []
+    values=json.loads(config.read_text()).get('personal',[])
+    if not isinstance(values,list) or len(values)>256:raise ValueError('Invalid personal backup exclusions')
+    for value in values:
+        if not isinstance(value,str) or not value or value=='.' or Path(value).is_absolute() or '..' in Path(value).parts:
+            raise ValueError('Personal backup exclusions must be relative paths within home')
+    return sorted({str(home/value) for value in values})
+
+def approved_exclusions(options):
+    values=options.get('approved_exclusions',[])
+    if not isinstance(values,list) or len(values)>10000:raise ValueError('Invalid backup exclusions')
+    for value in values:
+        if not isinstance(value,str) or not value.startswith('/') or value=='/' or '..' in Path(value).parts:
+            raise ValueError('Invalid backup exclusion path')
+    return set(values)
+
+def preflight(options):
+    source=source_root(options);rows=relative_mounts(source,mounts());blocked=[]
+    def denied(exc):
+        if not isinstance(exc,PermissionError):raise exc
+        path=Path(exc.filename)
+        relative='/'+str(path.relative_to(source))
+        blocked.append(dict(path=relative,reason=str(exc)))
+    for name in file_names(source,options,rows,denied):
+        path=source/name.removeprefix('./')
+        try:
+            info=path.lstat()
+            if stat.S_ISREG(info.st_mode):
+                fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK);os.close(fd)
+        except PermissionError as exc:denied(exc)
+    return dict(blocked=list({r['path']:r for r in blocked}.values()))
+
+def file_names(source,options,rows,on_denied=None):
     """Enumerate each selected filesystem once, including same-device bind mounts."""
     allowed=selection(options,rows)
     selected=[r['target'] for r in rows if r['target'] in allowed and r['fstype'] in BACKUP_FILESYSTEMS]
@@ -232,9 +272,13 @@ def file_names(source,options,rows):
         home=personal_user().pw_dir
         if any((r['target']==home or home.startswith(r['target'].rstrip('/')+'/')) and r['fstype'] in NETWORK_FILESYSTEMS for r in rows):raise ValueError(tr('Das persönliche Home liegt auf einer Netzwerkfreigabe; separat ausdrücklich sichern.'))
         roots=[home]
+        excluded.update(personal_exclusions())
+    excluded.update(approved_exclusions(options))
     roots=[p for p in roots if not any(p==h or p.startswith(h+'/') for h in excluded)]
     mounted={str(source/r['target'].lstrip('/')) for r in rows if r['target']!='/'}
-    def fail(error):raise error
+    def fail(error):
+        if on_denied and isinstance(error,PermissionError):on_denied(error)
+        else:raise error
     for root in roots:
         top=source/root.lstrip('/')
         for base,dirs,files in os.walk(top,topdown=True,followlinks=False,onerror=fail):
@@ -246,7 +290,10 @@ def file_names(source,options,rows):
                 path=Path(base)/name;rel=str(path.relative_to(source))
                 if str(path) in mounted or any('/'+rel==h or ('/'+rel).startswith(h+'/') for h in excluded):continue
                 if rel=='var/lib/heimserver-manager-client/migrations' or name.startswith('.hsm-migration-'):continue
-                if not path.is_symlink() and (path/'.hsm-system-restore-work').is_file():continue
+                try:
+                    if not path.is_symlink() and (path/'.hsm-system-restore-work').is_file():continue
+                except PermissionError as exc:
+                    exc.filename=str(path);fail(exc);continue
                 if root=='/' and rel.split('/')[0] in EXCLUDED:continue
                 if rel=='etc/NetworkManager/system-connections' and not options.get('network_profiles'):continue
                 if path.is_symlink():yield './'+rel
@@ -259,8 +306,25 @@ def file_names(source,options,rows):
                 yield './'+str(path.relative_to(source))
 
 
+def estimate_archive(options):
+    """Metadata-only estimate using the same mount/exclusion walk as tar."""
+    source=source_root(options);rows=relative_mounts(source,mounts())
+    total=10240;count=0;seen=set()
+    for name in file_names(source,options,rows):
+        check_cancelled()
+        info=(source/name.removeprefix('./')).lstat()
+        total+=2048;count+=1  # tar/PAX headers, ACLs and xattrs vary
+        if stat.S_ISREG(info.st_mode):
+            key=(info.st_dev,info.st_ino)
+            if key in seen:continue
+            seen.add(key)
+            size=min(info.st_size,info.st_blocks*512) if hasattr(info,'st_blocks') else info.st_size
+            total+=((size+511)//512)*512
+    return dict(bytes=total,entries=count,estimated=True)
+
+
 def main():
-    if not 2<=len(sys.argv)<=3 or sys.argv[1] not in ('backup','inventory'):raise SystemExit(tr('Unbekannte Aktion.'))
+    if not 2<=len(sys.argv)<=3 or sys.argv[1] not in ('backup','inventory','preflight'):raise SystemExit(tr('Unbekannte Aktion.'))
     options=json.loads(sys.argv[2]) if len(sys.argv)==3 else {}
     if not isinstance(options,dict):raise SystemExit(tr('Ungültige Auswahl.'))
     if options.get('component') not in (None,'system','personal'):raise ValueError(tr('Unbekannte Sicherungskomponente.'))
@@ -275,7 +339,14 @@ def main():
         options=dict(options,extra_mounts=[])
     if options.get('cancellable'):threading.Thread(target=watch_cancel,daemon=True).start()
     check_cancelled()
-    if sys.argv[1]=='inventory':print(json.dumps(inventory(options)));return
+    if sys.argv[1]=='preflight':
+        print(json.dumps(preflight(options)));return
+    if sys.argv[1]=='inventory':
+        result=inventory(options)
+        result['approved_exclusions']=sorted(approved_exclusions(options))
+        if personal:result['configured_exclusions']=personal_exclusions()
+        if options.get('estimate_size'):result['archive_estimate']=estimate_archive(options)
+        print(json.dumps(result));return
     source=source_root(options);host_rows=mounts();rows=relative_mounts(source,host_rows);args=command(options,host_rows)
     args=args[:args.index('--')]+['--no-recursion','--null','--verbatim-files-from','--files-from=-']
     with tempfile.TemporaryDirectory(prefix='hsm-personal-metadata-') as tmp:
@@ -297,4 +368,12 @@ def main():
             p.wait();raise
         finally:RUNNING.remove(p)
     raise SystemExit(code)
-if __name__=='__main__':main()
+def cli():
+    try:main()
+    except PermissionError as exc:
+        print(tr('Keine Leseberechtigung für Sicherungsquelle: ')+str(exc.filename or exc)+tr('. Rechte prüfen oder diesen Pfad ausdrücklich ausschließen. Sicherung nicht abgeschlossen.'),file=sys.stderr)
+        raise SystemExit(1)
+    except (OSError,ValueError) as exc:
+        print(str(exc),file=sys.stderr)
+        raise SystemExit(1)
+if __name__=='__main__':cli()

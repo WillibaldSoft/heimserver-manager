@@ -124,17 +124,22 @@ def register(app,config_dir):
     def valid_csrf():
         supplied=request.form.get('auth_csrf','') or request.headers.get('X-Server-Manager-CSRF','')
         return bool(supplied and secrets.compare_digest(supplied,session.get('auth_csrf','!')))
-    def logged_in():
+    def resolve_principal(auth):
         data=accounts.read();principal=None
-        if session.get('auth_expires',0)>time.time():
-            if session.get('auth_kind','local')=='local':
-                if session.get('auth_user')==data['username'] and session.get('auth_revision')==data['revision']:
-                    principal=dict(kind='local',name=data['username'],role='admin',modules=[],revision=data['revision'])
-            elif session.get('auth_kind')=='system':
-                candidate=users.principal(session.get('auth_user',''),data['session_secret'])
-                if candidate and candidate['revision']==session.get('auth_revision') and candidate['uid']==session.get('auth_uid') and secrets.compare_digest(candidate['stamp'],session.get('auth_stamp','')):principal=candidate
+        if auth.get('auth_kind','local')=='local':
+            if auth.get('auth_user')==data['username'] and auth.get('auth_revision')==data['revision']:
+                principal=dict(kind='local',name=data['username'],role='admin',modules=[],revision=data['revision'])
+        elif auth.get('auth_kind')=='system':
+            candidate=users.principal(auth.get('auth_user',''),data['session_secret'])
+            if candidate and candidate['revision']==auth.get('auth_revision') and candidate['uid']==auth.get('auth_uid') and secrets.compare_digest(candidate['stamp'],auth.get('auth_stamp','')):principal=candidate
+        return principal
+    def logged_in():
+        principal=resolve_principal(session) if session.get('auth_expires',0)>time.time() else None
         g.auth_principal=principal
         return principal is not None
+    from modules.backup.session_lease import Leases
+    leases=Leases(accounts.path.parent/'backup-sessions')
+    app.extensions['backup_leases']=leases
     def verify_login(username,password):
         data=accounts.read()
         if username==data['username']:
@@ -172,8 +177,15 @@ def register(app,config_dir):
         if token and request.remote_addr in ('127.0.0.1','::1') and machine_allowed(request.path,request.method):
             if secrets.compare_digest(token,accounts.read()['automation_token']):
                 g.auth_machine=True;return
-        if not logged_in():return denied()
-        g.auth_user=session['auth_user']
+        backup_token=request.headers.get('X-HSM-Backup-Session','')
+        if backup_token:
+            if request.path!='/api/account/backup':return denied()
+            try:
+                g.auth_principal=leases.validate(backup_token,request.headers.get('X-HSM-Device',''),request.headers.get('X-HSM-User',''),request.args.get('action','list'),request.method,request.args,resolve_principal)
+            except (ValueError,OSError,KeyError):return denied()
+            g.backup_session=backup_token
+        elif not logged_in():return denied()
+        g.auth_user=g.auth_principal['name']
         if not policy.allowed(g.auth_principal,request.path,request.method):
             if request.path.startswith('/api/') or request.method not in ('GET','HEAD'):return jsonify(ok=False,error='permission_denied'),403
             return shell('Kein Zugriff',_ui_html("<p>Dieser Bereich ist für dein Manager-Konto nicht freigegeben.</p><p><a href='/account'>Mein Bereich</a></p>")),403
@@ -184,7 +196,7 @@ def register(app,config_dir):
             expected=request.host_url.rstrip('/')
             if origin:
                 if origin!=expected:return jsonify(ok=False,error='cross_origin_request'),403
-            elif not valid_csrf():return jsonify(ok=False,error='csrf_required'),403
+            elif not getattr(g,'backup_session',None) and not valid_csrf():return jsonify(ok=False,error='csrf_required'),403
 
     @app.after_request
     def auth_headers(response):

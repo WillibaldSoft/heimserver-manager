@@ -2,6 +2,33 @@ HOME SERVER MANAGER – CHANGES PER VERSION
 This file is continued with each new DEB version.
 Review since 0.12-18 based on created packages and documented changes.
 
+0.13-3 – October 11, 2026 – Beta
+- Linux client 0.4.36: readability preflight for HTTPS system and personal backups. List inaccessible paths, exclude them for this run only after explicit confirmation, and record exclusions in the inventory. New read errors during transfer still fail the backup. Local per-user exclusions remain supported; packages contain no private exclusions.
+- Show incomplete incremental uploads and retire them after confirmation while preserving blocks and completed snapshots. Read files again and reuse identical blocks. Other devices, running verification, changed uploads and activity within ten minutes prevent retirement. Do not replace paused uploads.
+- Background checksum verification with status polling and verification progress instead of one long HTTP request. Mark complete only after successful verification. A lost connection or service restart leaves completion unconfirmed; do not discard data prematurely.
+- Personal inventory shows the home filesystem and excluded nested mounts. Clear read errors without an additional desktop crash report.
+- Update manager and client together; manager changes require a checked restart. Run-scoped authentication requires the updated running manager. Package builds do not change running services or backups. Windows and simple folder/USB backup modes do not receive these Linux HTTPS extensions.
+
+0.13-2 – October 11, 2026 – Beta
+- Linux client 0.4.35: HTTPS backups continue after normal login expiry using a separate credential scoped to the account, device and backup run. It is closed at the end and expires after 24 hours without API activity. Account locks and revoked permissions still apply. No passwords are stored.
+- Older managers retain the sign-in-again fallback for paused backups; the account and server must remain the same. Previously terminated transfers are not retroactively resumed.
+- Progress bar from 0 to 100 percent for Linux HTTPS system backups: estimate size from file metadata, weight new system and personal components, and count both transferred and reused blocks. Server verification is separate; 100 percent appears only after successful completion.
+- Size estimation uses the same mount and home exclusions as the backup. No temporary local archive. Sparse files, archive metadata and changes during a run limit estimate accuracy. Simple folder backups, the USB assistant and the Windows client are unchanged.
+- Offline files no longer automatically restore known local deletions when write-back is disabled; an explicit hint explains the required two-way and deletion options.
+- New tests cover expired sessions, run-scoped permissions, cancellation and size-based progress. New Linux clients require the matching manager update for unattended backups.
+
+Client 0.4.35 – October 11, 2026
+- Offline files: a known local deletion remains pending instead of being downloaded again when two-way sync or deletion propagation is disabled. Both options are required to delete the server copy. Concurrent server changes remain conflicts; files without a previous sync baseline are treated as new server files. Existing folder settings are not changed automatically.
+
+Client 0.4.34 – October 11, 2026
+- Linux HTTPS system backups display estimated progress from 0 to 100 percent, weighted across the new system and personal components. An existing reused system snapshot is excluded from the new workload. Sent and reused blocks both count; server verification is shown separately and 100 percent appears only after successful completion. A metadata scan uses the same mount exclusions; sparse files and archive metadata make the estimate approximate. No temporary local archive is created. The separate USB assistant and simple folder-backup flow are unchanged.
+
+Client 0.4.33 – October 11, 2026
+- Unattended HTTPS backups use a separate, revocable credential bound to the account, client device and backup run. Active transfers continue after the ordinary login expires, including shared system and personal components. The credential is closed at the end and expires after 24 hours without API activity. Account restrictions still apply. Requires the matching manager update; no passwords are stored. This does not automatically resume previously terminated transfers.
+
+Client 0.4.32 – October 11, 2026
+- Running Linux HTTPS backups pause when the account session expires and resume the same upload after signing in again with the same account and server. Uploaded blocks are preserved; permissions remain enforced. Keep the client open; previously terminated uploads are not retroactively resumed.
+
 
 0.13-1 – October 11, 2026 – Beta
 - New beta series for shared PC system snapshots and separate personal backups. Reuse existing system snapshots; explicitly refresh after system changes. Additional data disks and shares remain opt-in.

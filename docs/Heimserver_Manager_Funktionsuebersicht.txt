@@ -1,5 +1,32 @@
 HEIMSERVER MANAGER – FUNKTIONEN IM ÜBERBLICK
-Stand: Version 0.13-1 · 11. Oktober 2026
+Stand: Version 0.13-3 · 11. Oktober 2026
+
+NEU UND GEÄNDERT IN VERSION 0.13-3 – 11. Oktober 2026 – Beta
+- Linux-Client 0.4.36: Vorprüfung der Lesbarkeit für HTTPS-System- und persönliche Sicherungen. Gesperrte Pfade auflisten, nur nach ausdrücklicher Bestätigung für diesen Lauf auslassen und im Inventar dokumentieren. Zusätzliche Lesefehler während der Übertragung bleiben Fehler. Lokale benutzerspezifische Ausnahmen bleiben möglich; keine privaten Ausnahmen im Paket.
+- Unvollständige inkrementelle Aufträge im Ablauf anzeigen und nach Bestätigung zurücklegen; vorhandene Blöcke und fertige Stände bleiben erhalten. Neu einlesen und identische Blöcke wiederverwenden. Fremde Geräte, laufende Prüfungen, geänderte Aufträge und Aktivität in den letzten zehn Minuten verhindern die Freigabe. Pausierte Aufträge nicht ersetzen.
+- Prüfsummenabschluss im Hintergrund mit Statusabfragen und Prüffortschritt statt langer einzelner HTTP-Anfrage. Erst nach erfolgreicher Prüfung als abgeschlossen markieren. Bei Verbindungsabbruch oder Dienstneustart bleibt der Abschluss unbestätigt; Daten nicht vorschnell verwerfen.
+- Persönliches Inventar zeigt den Home-Datenträger und ausgeschlossene Unter-Mounts. Verständliche Lesefehler ohne zusätzlichen Desktop-Absturzbericht.
+- Manager und Client gemeinsam aktualisieren; der Manager lädt Änderungen erst nach geprüftem Neustart. Die auftragsgebundene Anmeldung benötigt den neuen laufenden Manager. Bestehende Dienste und Sicherungen werden beim Paketbau nicht verändert. Windows und einfacher Ordner-/USB-Sicherungsmodus erhalten diese Linux-HTTPS-Erweiterungen nicht.
+
+NEU UND GEÄNDERT IN VERSION 0.13-2 – 11. Oktober 2026 – Beta
+- Linux-Client 0.4.35: HTTPS-Sicherungen laufen mit einer eigenen, auf Konto, Gerät und Sicherungslauf begrenzten Berechtigung nach Ablauf der normalen Anmeldung weiter. Am Ende wird diese geschlossen; nach 24 Stunden ohne API-Aktivität verfällt sie. Kontosperren und entzogene Rechte gelten weiterhin. Keine Passwortspeicherung.
+- Bei älteren Managern bleibt die erneute Anmeldung während einer pausierten Sicherung möglich; Konto und Server müssen gleich bleiben. Bereits beendete Übertragungen werden nicht nachträglich fortgesetzt.
+- Fortschrittsbalken von 0 bis 100 Prozent für Linux-HTTPS-Systemsicherungen: Umfang vorab anhand der Dateiinformationen schätzen, neuen Systemstand und persönliche Daten gewichten, übertragene und wiederverwendete Blöcke zählen. Serverprüfung separat; 100 Prozent erst nach erfolgreichem Abschluss.
+- Die Umfangsprüfung verwendet dieselben Mount- und Home-Ausschlüsse wie die Sicherung. Kein lokales Zwischenarchiv. Sparse-Dateien, Archivmetadaten und Änderungen während des Laufs begrenzen die Genauigkeit der Schätzung. Einfacher Ordner-Backupmodus, USB-Assistent und Windows-Client unverändert.
+- Offline-Dateien stellen bekannte lokale Löschungen bei ausgeschalteter Rückübertragung nicht mehr automatisch wieder her; ein Hinweis erklärt die nötigen Optionen für beidseitigen Abgleich und Löschweitergabe.
+- Neue Tests für abgelaufene Anmeldungen, auftragsgebundene Berechtigungen, Abbruch und Datenumfang. Neue Linux-Clients benötigen die passende Manager-Ergänzung für unbeaufsichtigte Sicherungen.
+
+Client 0.4.35 – 11. Oktober 2026
+- Offline-Dateien: Eine erkannte lokale Löschung bleibt ausstehend, statt erneut heruntergeladen zu werden, wenn der beidseitige Abgleich oder die Löschweitergabe deaktiviert ist. Beide Optionen sind zum Löschen auf dem Server erforderlich. Zwischenzeitliche Serveränderungen bleiben Konflikte; Dateien ohne bisherigen Abgleichstand gelten als neue Serverdateien. Bestehende Ordnereinstellungen werden nicht automatisch geändert.
+
+Client 0.4.34 – 11. Oktober 2026
+- Linux-HTTPS-Systemsicherungen zeigen einen geschätzten Fortschritt von 0 bis 100 Prozent, nach Umfang des neuen Systemstands und der persönlichen Daten gewichtet. Ein wiederverwendeter fertiger Systemstand zählt nicht erneut. Übertragene und wiederverwendete Blöcke zählen; die Serverprüfung wird separat angezeigt, 100 Prozent erst bei erfolgreichem Abschluss. Eine Vorabprüfung der Dateiinformationen berücksichtigt dieselben Mount-Ausschlüsse; Sparse-Dateien und Archivmetadaten machen die Anzeige zu einem Näherungswert. Kein lokales Zwischenarchiv. Separater USB-Assistent und einfache Ordnersicherung unverändert.
+
+Client 0.4.33 – 11. Oktober 2026
+- Unbeaufsichtigte HTTPS-Sicherungen erhalten eine eigene widerrufbare Berechtigung für Konto, Client-Gerät und Sicherungslauf. Aktive Übertragungen laufen nach Ablauf der normalen Anmeldung weiter, einschließlich gemeinsamem Systemstand und persönlichen Daten. Die Berechtigung wird am Ende geschlossen und verfällt nach 24 Stunden ohne API-Aktivität. Kontosperren und Rechte gelten weiterhin. Passende Manager-Ergänzung erforderlich; keine Passwortspeicherung. Bereits beendete Übertragungen werden nicht automatisch fortgesetzt.
+
+Client 0.4.32 – 11. Oktober 2026
+- Laufende Linux-HTTPS-Sicherungen pausieren bei abgelaufener Konto-Anmeldung und setzen denselben Auftrag nach erneuter Anmeldung mit demselben Konto und Server fort. Übertragene Blöcke bleiben erhalten; Berechtigungen gelten weiter. Client geöffnet lassen; bereits beendete Übertragungen werden nicht nachträglich fortgesetzt.
 
 NEU UND GEÄNDERT IN VERSION 0.13-1 – 11. Oktober 2026 – Beta
 - Neue Beta-Reihe für gemeinsame PC-Systemstände und getrennte persönliche Sicherungen. Vorhandene Systemstände wiederverwenden; Aktualisierung nach Systemänderungen ausdrücklich wählen. Zusätzliche Datenplatten und Freigaben bleiben opt-in.
