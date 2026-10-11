@@ -11,8 +11,8 @@
   },
   "README.md": {
     "english": "docs/en/README.md",
-    "english_sha256": "8d4c36fbf9d1a8457091ca6f59fdb480acd56defe2028db68b58585ffd1fcff2",
-    "source_sha256": "34e95b62a43cba8882b2f6b33074263c13dfd7b4a8fa1c320a526f98e9b77be0"
+    "english_sha256": "4a4978807d19b73c8257eb5dc71da4f41da7cd18fc90e5a9e5ba6beed4646537",
+    "source_sha256": "5039af0f4ae858f04828c031a6d5a82dacd977d48a445565f5135afe942a483b"
   },
   "THIRD_PARTY_NOTICES.md": {
     "english": "docs/en/THIRD_PARTY_NOTICES.md",
@@ -261,8 +261,8 @@
   },
   "docs/SCREENSHOTS.md": {
     "english": "docs/en/SCREENSHOTS.md",
-    "english_sha256": "a22a812d387cde0124b1c97bbed6a5c64649f28721d791dc9af97d56ba91c0af",
-    "source_sha256": "0cb93e5e43756dd4a55b06b410b6d427964f5b334abd11d60817b4504b6ec09c"
+    "english_sha256": "0c56e4649ea22f559e9b55bde06f21af7fe96148299abdbf29785d1238e9550d",
+    "source_sha256": "e2f63227f6ccba3d09842c4e355c061198d027884624d4eaab5af62762b66a50"
   },
   "docs/SERVER_PATHS.md": {
     "english": "docs/en/SERVER_PATHS.md",

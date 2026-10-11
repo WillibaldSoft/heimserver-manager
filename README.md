@@ -10,7 +10,7 @@
 
 ## Einblicke in die Oberfläche
 
-[Screenshot-Galerie: sieben wichtige Bereiche](docs/SCREENSHOTS.md)
+[Screenshot-Galerie: Manager, Desktop-Client und Statussymbole](docs/SCREENSHOTS.md)
 
 <details>
 <summary>Übersicht anzeigen (anonymisiert)</summary>

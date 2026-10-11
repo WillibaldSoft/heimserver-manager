@@ -10,7 +10,7 @@ A self-hosted home server dashboard for Debian Linux and homelabs. Manage applic
 
 ## See the interface
 
-[Screenshot gallery: seven key areas](SCREENSHOTS.md)
+[Screenshot gallery: Manager, desktop client and tray icons](SCREENSHOTS.md)
 
 <details>
 <summary>Show dashboard (anonymized)</summary>

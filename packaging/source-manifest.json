@@ -188,6 +188,8 @@
   "docs/screenshots/05-virtuelle-maschinen.jpg",
   "docs/screenshots/06-schlaf-wake.jpg",
   "docs/screenshots/07-speicher.jpg",
+  "docs/screenshots/08-client-manager.png",
+  "docs/screenshots/09-client-einrichtung.png",
   "docs/server-control.md",
   "i18n.py",
   "locales/de.json",
