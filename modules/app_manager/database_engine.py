@@ -6,6 +6,7 @@ import shutil
 import sqlite3
 from datetime import datetime
 from pathlib import Path
+from contextlib import closing
 
 from .runner import sh
 
@@ -187,7 +188,7 @@ def run_database_backup(manager, target_dir):
             dst = target / src.name
             if src.exists():
                 try:
-                    with sqlite3.connect(src.resolve().as_uri()+'?mode=ro',uri=True,timeout=30) as source_db, sqlite3.connect(dst) as backup_db:
+                    with closing(sqlite3.connect(src.resolve().as_uri()+'?mode=ro',uri=True,timeout=30)) as source_db, closing(sqlite3.connect(dst)) as backup_db, backup_db:
                         source_db.backup(backup_db)
                         if backup_db.execute('PRAGMA integrity_check').fetchone()[0]!='ok':raise sqlite3.DatabaseError('Integritätsprüfung fehlgeschlagen')
                     dst.chmod(0o600)

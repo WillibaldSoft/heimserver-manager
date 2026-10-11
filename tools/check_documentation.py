@@ -29,6 +29,14 @@ def check(root):
     if current not in features.splitlines()[1]:raise ValueError('English feature overview has a different version.')
     versions=re.findall(r'^([0-9]+\.[0-9]+-[0-9][\w.+~]*)\s*[–—-]',history,re.M)
     if not versions or versions[0]!=current:raise ValueError('English version history has a different latest version.')
+    for rel in ('CHANGELOG.md','docs/en/CHANGELOG.md'):
+        header=(root/rel).read_text().splitlines()[2]
+        if '**'+current+'**' not in header:raise ValueError('Changelog has a different current version: '+rel)
+    german_features=(root/'docs/Heimserver_Manager_Funktionsuebersicht.txt').read_text()
+    german_history=(root/'docs/Heimserver_Manager_Versionsaenderungen.txt').read_text()
+    if 'Stand: Version '+current+' ·' not in german_features.splitlines()[1]:raise ValueError('German feature overview has a different version.')
+    german_versions=re.findall(r'^([0-9]+\.[0-9]+-[0-9][\w.+~]*)\s*[–—-]',german_history,re.M)
+    if not german_versions or german_versions[0]!=current:raise ValueError('German version history has a different latest version.')
     return len(actual)
 def main():
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--source',type=Path,default=Path(__file__).resolve().parents[1]);parser.add_argument('--refresh',action='store_true',help='Record hashes only AFTER translations have been reviewed; does not translate.')

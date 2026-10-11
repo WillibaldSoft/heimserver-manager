@@ -5,7 +5,7 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'client_agent/desktop'
 import offline_mounts as m
 class Mounts(unittest.TestCase):
  def test_active_and_fstab(self):
-  rows=m.discover('12 1 0:1 / /mnt/shares/Example rw - cifs //server/Andi rw\n13 1 0:2 / /media/My\\040Files rw - nfs server:/files rw','//server/Downloads /SVL/Downloads cifs noauto 0 0')
+  rows=m.discover('12 1 0:1 / /mnt/shares/Example rw - cifs //server/Example rw\n13 1 0:2 / /media/My\\040Files rw - nfs server:/files rw','//server/Downloads /SVL/Downloads cifs noauto 0 0')
   self.assertEqual(3,len(rows));self.assertTrue(next(r for r in rows if r['target']=='/mnt/shares/Example')['active']);self.assertFalse(next(r for r in rows if r['target']=='/SVL/Downloads')['active']);self.assertIn('/media/My Files',[r['target'] for r in rows])
  def test_network_source_never_destination(self):
   with patch.object(m.Path,'resolve',lambda p:p),patch.object(m,'discover',return_value=[dict(target='/mnt/shares/Example')]):
@@ -17,7 +17,7 @@ class Mounts(unittest.TestCase):
  def test_only_simple_exact_fstab_entry_can_be_replaced(self):
   import offline_mount_admin as admin
   target=Path('/mnt/shares/Example')
-  entry='//server/Andi /mnt/shares/Example cifs credentials=/etc/smb-secret 0 0\n'
+  entry='//server/Example /mnt/shares/Example cifs credentials=/etc/smb-secret 0 0\n'
   self.assertEqual(entry,admin.matching_line(entry,target)[2])
   for text in ('',entry+entry,entry.replace('credentials=/etc/smb-secret','x-systemd.automount'),entry.replace(' cifs ',' ext4 ')):
    with self.assertRaises(ValueError):admin.matching_line(text,target)
@@ -31,9 +31,9 @@ class Mounts(unittest.TestCase):
   import offline_mount_admin as a
   with tempfile.TemporaryDirectory() as tmp:
    root=Path(tmp);target=root/'mount';target.mkdir();local=root/'offline';local.mkdir();(local/'file').write_text('retained')
-   table=root/'fstab';original='//server/Andi '+str(target)+' cifs defaults 0 0\n';table.write_text(original)
+   table=root/'fstab';original='//server/Example '+str(target)+' cifs defaults 0 0\n';table.write_text(original)
    uid=os.getuid() or 1000
-   with patch.object(a.offline_systemd,'inspect',return_value=None),patch.object(a,'STATE',root/'state'),patch.object(a,'FSTAB',table),patch.object(a,'trusted_parent'),patch.object(a,'validate_local',return_value=local),patch.object(a.os,'geteuid',return_value=0),patch.dict(os.environ,{'PKEXEC_UID':str(uid)}),patch.object(a,'discover',return_value=[dict(target=str(target),source='//server/Andi',active=True)]),patch.object(a,'atomic',side_effect=table.write_text),patch.object(a,'run'):
+   with patch.object(a.offline_systemd,'inspect',return_value=None),patch.object(a,'STATE',root/'state'),patch.object(a,'FSTAB',table),patch.object(a,'trusted_parent'),patch.object(a,'validate_local',return_value=local),patch.object(a.os,'geteuid',return_value=0),patch.dict(os.environ,{'PKEXEC_UID':str(uid)}),patch.object(a,'discover',return_value=[dict(target=str(target),source='//server/Example',active=True)]),patch.object(a,'atomic',side_effect=table.write_text),patch.object(a,'run'):
     if local.stat().st_uid!=uid:return self.skipTest('requires non-root fixture owner')
     with patch.object(sys,'argv',['helper','replace',str(target),str(local)]):a.main()
     self.assertTrue(target.is_symlink());self.assertEqual('retained',(target/'file').read_text());self.assertIn('# HSM-OFFLINE',table.read_text())

@@ -4890,7 +4890,9 @@ s,d=map(os.path.realpath,sys.argv[1:]); c=os.path.commonpath([s,d])
 if c in (s,d): raise SystemExit('Backup und Ziel überlappen')
 PY_OVERLAP
     if [[ "$LIVE_MODE" != true ]] && pgrep -u "$SOURCE_UID" >/dev/null; then
-        v20_note übersprungen 'Home: Benutzer hat laufende Prozesse. Abmelden und aus anderer Admin-Sitzung wiederholen.'; return 1
+        if [[ "${HSM_HTTPS_MIGRATION:-false}" == true ]] && v20_confirm 'Zielbenutzer ist angemeldet. Programme schließen! Home trotzdem im laufenden System übernehmen? Konfliktkopien bleiben erhalten; Client-Identität bleibt unverändert'; then
+            v20_note 'manuell prüfen' 'Home bei angemeldetem Benutzer: nach Abschluss abmelden; laufende Programme können Einstellungen erneut schreiben.'
+        else v20_note übersprungen 'Home: Benutzer hat laufende Prozesse. Abmelden und aus anderer Admin-Sitzung wiederholen.'; return 1; fi
     fi
     if [[ "$V20_SAME" != true ]]; then
         opts+=(--exclude=/.config/dconf/ --exclude=/.config/autostart/ --exclude=/.config/systemd/ --exclude=/.config/environment.d/ --exclude=/.config/monitors.xml)
@@ -5161,7 +5163,7 @@ v20_restore_menu_manual() {
     local choice component
     v20_init_report || return 1
     v20_compat || return 1
-    printf '\n1) Daten (Home)\n2) Standard-Restore\n3) Vollständiger System-Restore\n4) Mint -> Tumbleweed Migration\n5) Komponenten auswählen\n0) Zurück\n'
+    printf '\n1) Daten (Home)\n2) Standard-Restore\n3) Vollständiger System-Restore\n4) Mint -> Tumbleweed Migration\n5) Komponenten auswählen\n6) Zusätzlicher Datenträger (HTTPS-Migration)\n0) Zurück\n'
     read -r -p 'Auswahl: ' choice || return 1
     case "$choice" in
         0) return 0 ;;
@@ -5177,9 +5179,12 @@ v20_restore_menu_manual() {
                 for component in identity local units cron config network; do v20_system_components "$component" || v20_note 'manuell prüfen' "$component unvollständig"; done
                 v20_svl_restore || v20_note 'manuell prüfen' 'SVL unvollständig'
             fi ;;
+        6)
+            if declare -F hsm_data_restore >/dev/null; then hsm_data_restore
+            else v20_note übersprungen 'Datenlaufwerke über HTTPS-Migration wiederherstellen'; return 1; fi ;;
         5)
             printf 'Komponente: home packages software desktop local units cron config identity network svl\n'
-            read -r component || return 1
+            read -r -p 'Komponente: ' component || return 1
             case "$component" in
                 home) v20_home;; packages) v20_packages;; software) v20_extra_software;; desktop) v20_desktop;; svl) v20_svl_restore;;
                 local|units|cron|config|identity|network) v20_system_components "$component";;

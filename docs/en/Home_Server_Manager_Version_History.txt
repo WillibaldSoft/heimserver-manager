@@ -3,6 +3,16 @@ This file is continued with each new DEB version.
 Review since 0.12-18 based on created packages and documented changes.
 
 
+0.13-1 – October 11, 2026 – Beta
+- New beta series for shared PC system snapshots and separate personal backups. Reuse existing system snapshots; explicitly refresh after system changes. Additional data disks and shares remain opt-in.
+- Administrators can explicitly grant system backup and recovery permission per user. Shared snapshots contain sensitive system files; other users’ personal backups remain isolated.
+- Cancel individual backups while retaining completed snapshots. Short backup API requests release their sleep blocker after processing; archive downloads retain it until closed.
+- Linux client 0.4.31: completed English cancellation text and notices for delegated system rights. Windows client unchanged.
+- Aligned current versions in CHANGELOG, feature overview and history in German/English; release checks now detect inconsistent current version declarations.
+- SQLite backups close database connections even on errors; special characters in backup source paths are handled correctly.
+- Standardized full test discovery and added missing test dependencies to the release inventory.
+- Limits: beta; automated tests do not fully cover hardware, network and real restoration scenarios. Old combined backups are not automatically converted to shared snapshots.
+
 0.12-67 – October 10, 2026
 - Offline files: select a user/client first, then edit its folder assignments. Only mounts and configured SMB/NFS share roots are selectable; no subdirectories are enumerated. Other clients and existing permissions are preserved.
 - Offline files: deeper subfolders selectable in Linux/Windows clients (0.4.8 / 0.2.10). Existing SMB/NFS/Linux rights replace extra write grants; ambiguous rules are refused. File operations run as the paired Linux user, not the emergency ADMIN account.
@@ -609,3 +619,60 @@ Manage Apps: local installation, status, configuration, and updates. Existing AP
 Service runs without root using systemd credentials and source IP releases. Recovery is asynchronous; 202 means accepted, check status for result. Soft/Reset optional, previous selection visible during migration. Direct /soft, /reset, /cycle endpoints removed. LAN/VPN only, no public port release. No Nextcloud wake proxy; installation changes neither DNS nor router and does not shut down target server.
 
 Language setting (development status as of October 7, 2026): English without saved browser language selection. Settings / Languages offers German and English; existing selection remains intact.
+
+Unreleased fix 2026-10-11: Offline sleep blockers display the current client name. They apply only to enabled clients reported online with a renewed sync lease (at most 120 seconds without renewal). Open or orphaned HTTP requests cannot block indefinitely. Pending files alone do not keep the server awake. The next manual or configured automatic sync uses confirmed progress; powered-off clients do not synchronize.
+
+Linux client 0.4.18 (2026-10-11): Offline synchronization shows per-folder percentage, transferred MiB, current file and estimated time remaining. Inventory and checksum scans are shown separately beforehand. 100% is shown only after successful completion; conflicts remain visible. Remaining time is an estimate, not a completion guarantee. Windows unchanged.
+
+Linux client 0.4.19 (2026-10-11): “Release server” pauses this client’s offline synchronization, including interval and shutdown runs, and releases its offline sleep leases. Running transfers stop at the next cancellation check; local changes and confirmed file checkpoints remain intact. If unreachable, leases expire within 120 seconds. “Server needed”, “Wake and connect” or “Prepare access” allow synchronization again. Other clients remain unaffected. Windows unchanged.
+
+Linux client 0.4.20 (2026-10-11): Manual “Release server” persists across heartbeats even in “Start with server” mode. A new client start, “Server needed”/“Wake and connect”/“Prepare access”, or a saved operating-mode change clears the override. The configured startup mode is retained; offline synchronization stays paused during release.
+
+Linux client 0.4.21 (2026-10-11): The tray “Offline files” menu appears only when folders are configured. “Synchronize now” runs all configured folders without changing their schedule. Saved presets “Every 10 minutes”, “After client startup” and “Manual only” apply to all folders and disable shutdown synchronization. Individual settings remain available in the offline dialog. Manual server release remains in effect. Windows unchanged.
+
+Unreleased (2026-10-11): Nextcloud / Web and DAVx⁵ have independent active/inactive switches and daily schedules with up to eight periods per service. Existing shared policies are inherited by both. Gateway 1.2 separately counts requests, deferred background checks, wake requests denied by policy and recovery calls; counters survive normal restarts. No historical backfill and no IP addresses or credentials in counters. DAVx⁵ recognition uses its client header; manual and automatic requests cannot be distinguished. Access and transfer protection remain available outside wake periods when the server is already running.
+
+- Fix: recognize the known previous gateway unit when counter storage is configured through a separate drop-in; unknown service definitions remain protected.
+
+Linux client 0.4.22 (2026-10-11): HTTPS system archives connected to the existing migration assistant. Select source/target users, APT/openSUSE package migration, additional software and system components; resume prepared migration after target startup without another download. Select additional local volumes; offline Debian package inventory without executing source-system programs. No automatic partitioning or universal cross-distribution identical-system guarantee; work disk and component-report review required. Windows unchanged.
+
+Additional 0.4.22 changes: read backups from your own paired PCs after Manager login; new snapshots identify their source PC. Migration may target the running system; home migration for a signed-in user needs extra confirmation. Target client profile and autostart remain protected; other users and agent-only tokens stay isolated.
+
+Client 0.4.22: Separate scheduled UID/GID adoption from the authenticated server account, with owner/ACL checks and retained client binding. Normal login remains blocked if conversion is incomplete.
+
+Client 0.4.23 · 2026-10-11
+- Check UID/GID without administrator approval; show local and server values.
+- No adoption offered for matching IDs. Differences allow a separate administrator-approved adoption check.
+
+Client 0.4.24 · 2026-10-11
+- Fixed connection failure after UID/GID extension: identity lookup is separate from protected backup data.
+- Existing profiles and tokens remain valid; no replacement JSON required.
+- Local identity errors are distinguished from server unavailability.
+
+Client 0.4.25 · 2026-10-11
+- Simplified main window: connection settings and setup actions share one collapsible section.
+- Expanded during first setup, initially collapsed for existing configurations.
+- Server controls, offline files, backups and logs remain directly accessible.
+
+Client 0.4.26 · 2026-10-11
+- Combined UID/GID checks and cancellation in one entry.
+- Direct Manager sign-in from the UID/GID dialog; missing or expired sessions lead to sign-in, then continue checking.
+- Cancelling a scheduled local change remains available without Manager sign-in, subject to administrator approval.
+
+Client 0.4.27 · 2026-10-11
+- Home file backup is the default, including the HTTPS system dialog.
+- Full system backup requires explicit selection. Home file backups do not replace system backups.
+- Exclude nested server shares, additional drives and bind mounts.
+- Failure to read the mount table prevents backup startup rather than including unchecked mounts.
+
+Client 0.4.28 · 2026-10-11
+- Restored full system backup as the default; home file backup remains optional.
+- Local system partitions remain included. Additional data disks and supported mounted server shares are unchecked by default.
+- Back up explicitly selected shares without automatically including further nested mounts.
+- Confirmation lists the additional selected sources.
+
+Linux client 0.4.29 (2026-10-11): Shared system snapshot per stable PC identity, with separate personal home backups per account/client. Before HTTPS backup, the client checks for a completed shared snapshot. It reuses that snapshot and rereads personal data, transmitting only new/changed 4-MiB blocks. Each personal snapshot remains fully downloadable. The shared snapshot excludes normal user homes and requires Manager administrator sign-in to create, refresh or download. Explicitly refresh it after system/application changes. Every user must back up their own home; missing personal backups are not silently collected from other accounts. Additional disks/shares are included only when selected for a new system snapshot. Personal homes must be below /home; network homes are not backed up automatically. Restore the system as administrator first, then restore personal snapshots separately; personal migration does not change system components. Old combined snapshots remain private to their original account/profile and are not automatically shared. Use the USB wizard for offline sources. Windows unchanged.
+
+Linux client 0.4.30 (2026-10-11): “Cancel backup” during HTTPS system/home/folder backups and local ZIP file backups. The current section may still need a response. Inventory/archive helpers receive a cancellation signal; only the specific unfinished upload ID is discarded. Completed snapshots and shared referenced blocks are retained. If completion has already been confirmed, the snapshot is retained; an unreachable server produces a pending-cleanup notice. Manager administrators can also cancel running/unfinished desktop uploads under Backup & Recovery → Desktop Client Backups. The separate interactive USB/NFS system wizard and restores do not receive a blanket forced stop. An already running older client gets the new button only after updating and restarting.
+
+User permission for PC system snapshots (2026-10-11): Under Settings → Manager users, an administrator can enable “Allow PC system backup and system recovery”. Requires the User role and Own clients & backups. Grants access to all shared PC system snapshots, including sensitive system files. Other users’ personal backups and server backup jobs remain restricted. Disabled by default; changes revoke existing account sessions. Agent tokens do not receive these rights.

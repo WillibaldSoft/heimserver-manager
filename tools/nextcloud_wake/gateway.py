@@ -1,18 +1,19 @@
 #!/usr/bin/env python3
 """Streaming Nextcloud wake gateway behind a local TLS reverse proxy."""
-import asyncio,contextlib,json,ssl,time,ipaddress,secrets,hashlib,hmac,contextvars,collections
+import asyncio,contextlib,json,ssl,time,ipaddress,secrets,hashlib,hmac,contextvars,collections,os,tempfile
 from pathlib import Path
 from urllib.parse import urlsplit
 from aiohttp import web,ClientSession,ClientTimeout,DummyCookieJar,TCPConnector
 from multidict import CIMultiDict
 from yarl import URL
-VERSION='1.1'
+VERSION='1.2'
 
-# HSM_NEXTCLOUD_WAKE_CONTROL_V2: applies only to this Nextcloud gateway.
+# HSM_NEXTCLOUD_WAKE_CONTROL_V3 (HSM_NEXTCLOUD_WAKE_CONTROL_V2): applies only to this Nextcloud gateway.
 WAKE_CONTROL = Path('/etc/server-manager-nextcloud-wake-control.json')
-def wake_enabled():
+def wake_enabled(service="nextcloud"):
     try:
         config = json.loads(WAKE_CONTROL.read_text())
+        if 'services' in config:config=config['services'][service]
         mode = config.get('mode')
         if mode in ('active', 'inactive'):return mode == 'active'
         if mode != 'schedule' or type(config.get('default')) is not bool:return False
@@ -25,6 +26,34 @@ def wake_enabled():
         return result
     except FileNotFoundError:return True
     except (OSError, ValueError, TypeError, KeyError, AttributeError):return False
+
+
+WAKE_KIND=contextvars.ContextVar('wake_kind',default='nextcloud')
+STATS_FILE=Path('/var/lib/server-manager-nextcloud-wake/statistics.json')
+class Counters:
+    def __init__(self,path=None):
+        self.path=path or STATS_FILE;self.last_write=0
+        self.data=dict(since=time.strftime('%Y-%m-%d %H:%M:%S %Z'),services={})
+        try:
+            saved=json.loads(self.path.read_text())
+            if isinstance(saved,dict) and isinstance(saved.get('services'),dict):self.data=saved
+        except (OSError,ValueError):pass
+    def add(self,service,event):
+        row=self.data['services'].setdefault(service,{})
+        row[event]=int(row.get(event,0))+1
+        row['last_'+event]=time.strftime('%Y-%m-%d %H:%M:%S %Z')
+        self.flush(force=event=='recovery_requested')
+    def flush(self,force=False):
+        if not force and time.monotonic()-self.last_write<10:return
+        self.last_write=time.monotonic()
+        try:
+            fd,tmp=tempfile.mkstemp(dir=self.path.parent,prefix='.statistics-')
+            try:
+                with os.fdopen(fd,'w') as f:json.dump(self.data,f)
+                os.replace(tmp,self.path)
+            finally:
+                if os.path.exists(tmp):os.unlink(tmp)
+        except OSError:pass
 
 
 HOP={'connection','keep-alive','proxy-authenticate','proxy-authorization','te','trailer','transfer-encoding','upgrade'}
@@ -73,7 +102,7 @@ def background_poll(request):
 
 class Gateway:
     def __init__(self,c):
-        self.c=c;self.active=set();self.protected=set();self.tail_until=0;self.lease_until=0;self.last_wake=-1e12;self.waking=None;self.session=None;self.background=None;self.draining=False;self.last_lease_state=None
+        self.c=c;self.counters=Counters();self.active=set();self.protected=set();self.tail_until=0;self.lease_until=0;self.last_wake=-1e12;self.waking=None;self.session=None;self.background=None;self.draining=False;self.last_lease_state=None
     async def start(self,app):
         tls=ssl.create_default_context()
         if self.c.get('ca_pem'):tls.load_verify_locations(cadata=self.c['ca_pem'])
@@ -81,6 +110,7 @@ class Gateway:
         if hasattr(self.session,'_retry_connection'):self.session._retry_connection=False
         self.background=asyncio.create_task(self.keep_awake())
     async def close(self,app):
+        self.counters.flush(force=True)
         self.background.cancel()
         with contextlib.suppress(asyncio.CancelledError):await self.background
         if self.waking and not self.waking.done():
@@ -104,6 +134,7 @@ class Gateway:
                 if not ok and self.lease_until and time.monotonic()>self.lease_until:
                     # Stop transfers before the manager's 180-second lease expires.
                     for task in list(self.protected):task.cancel()
+            self.counters.flush()
             await asyncio.sleep(20)
     async def ready(self):
         try:
@@ -115,18 +146,21 @@ class Gateway:
         except Exception:return 'unreachable'
     async def wake_wait(self):
         if await self.ready()=='ready':return True
-        if not wake_enabled():
+        if not wake_enabled(WAKE_KIND.get()):
             audit('recovery_not_sent',cause='wake_disabled');return False
         if await self.ready()=='unreachable' and time.monotonic()-self.last_wake>=self.c['wake_cooldown']:
-            if not wake_enabled():return False
+            if not wake_enabled(WAKE_KIND.get()):return False
             self.last_wake=time.monotonic()
-            audit('recovery_requested',cause='backend_unreachable')
+            self.counters.add(WAKE_KIND.get(),'recovery_requested')
+            audit('recovery_requested',cause='backend_unreachable',client=WAKE_KIND.get())
             try:
                 # Legacy GET compatibility; never retry this potentially state-changing call.
                 async with self.session.get(self.c['recovery_url'],allow_redirects=False,timeout=ClientTimeout(total=8)) as r:
                     audit('recovery_response',http_status=r.status)
-                    if r.status not in (200,202,409):return False
+                    if r.status not in (200,202,409):
+                        self.counters.add(WAKE_KIND.get(),'recovery_failed');return False
             except Exception as exc:
+                self.counters.add(WAKE_KIND.get(),'recovery_uncertain')
                 audit('recovery_transport_error',error_class=type(exc).__name__)
                 # Older synchronous API may still be working after its HTTP timeout.
                 pass
@@ -139,6 +173,8 @@ class Gateway:
         audit('wake_wait_expired');return False
     async def ensure_ready(self):
         if await self.ready()=='ready':return True
+        if not wake_enabled(WAKE_KIND.get()):
+            self.counters.add(WAKE_KIND.get(),'blocked');audit('recovery_not_sent',cause='service_schedule',client=WAKE_KIND.get());return False
         if self.waking is None or self.waking.done():self.waking=asyncio.create_task(self.wake_wait())
         return await asyncio.shield(self.waking)
     async def handle(self,request):
@@ -153,17 +189,21 @@ class Gateway:
         if request.host.lower().split(':')[0]!=self.c['domain'].lower():raise web.HTTPMisdirectedRequest()
         if request.headers.get('Upgrade'):raise web.HTTPNotImplemented(text='WebSocket-Verbindungen werden von diesem Nextcloud-Wake-Gateway nicht unterstützt.')
         if len(self.active)>=32:raise web.HTTPServiceUnavailable(headers={'Retry-After':'30'})
+        kind='davx' if 'davx' in request.headers.get('User-Agent','').lower() else 'nextcloud'
+        kind_token=WAKE_KIND.set(kind);self.counters.add(kind,'requests')
         poll=background_poll(request)
         task=asyncio.current_task();self.active.add(task);response=None
         if not poll:self.protected.add(task)
-        context_token=REQUEST_ID.set(secrets.token_hex(6));started=time.monotonic();outcome='error'
+        context_token=REQUEST_ID.set(secrets.token_hex(6));started=time.monotonic();outcome='error';leased=False
         audit('request_started',background_poll=poll,**request_meta(request,self.c['token']))
         try:
             if poll and await self.ready()!='ready':
+                self.counters.add(kind,'poll_deferred')
                 audit('poll_deferred',cause='backend_not_ready')
                 raise web.HTTPServiceUnavailable(text='Nextcloud schläft. Hintergrundabfrage später wiederholen.',headers={'Retry-After':'300'})
             if not poll and not await self.ensure_ready():raise web.HTTPServiceUnavailable(text='Nextcloud noch nicht bereit. Später erneut versuchen.',headers={'Retry-After':'30'})
             if not poll and not await self.lease():raise web.HTTPServiceUnavailable(text='Schlafblocker nicht bestätigt. Manager-Zugang und Netzwerkmodul prüfen.',headers={'Retry-After':'30'})
+            leased=not poll
             headers=clean_headers(request.headers)
             for key in ('Forwarded','X-Forwarded-For','X-Forwarded-Host','X-Forwarded-Proto','X-Real-IP'):
                 headers.popall(key,None)
@@ -191,9 +231,9 @@ class Gateway:
             raise web.HTTPBadGateway(text='Übertragung nicht abgeschlossen. Status prüfen; keine automatische Wiederholung.')
         finally:
             self.active.discard(task);self.protected.discard(task)
-            if not poll:self.tail_until=time.monotonic()+self.c['hold_seconds']
-            audit('request_finished',outcome=outcome,duration_seconds=round(time.monotonic()-started,1),hold_seconds=0 if poll else self.c['hold_seconds'],background_poll=poll,active_requests=len(self.active))
-            REQUEST_ID.reset(context_token)
+            if leased:self.tail_until=time.monotonic()+self.c['hold_seconds']
+            audit('request_finished',outcome=outcome,duration_seconds=round(time.monotonic()-started,1),hold_seconds=self.c['hold_seconds'] if leased else 0,background_poll=poll,active_requests=len(self.active))
+            REQUEST_ID.reset(context_token);WAKE_KIND.reset(kind_token)
 def create_app(conf):
     g=Gateway(conf);app=web.Application(client_max_size=0,handler_args={'auto_decompress':False});app['gateway']=g
     app.router.add_route('*','/{path:.*}',g.handle);app.on_startup.append(g.start);app.on_cleanup.append(g.close);return app

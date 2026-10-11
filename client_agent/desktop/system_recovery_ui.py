@@ -12,17 +12,61 @@ def open_dialog(app):
     dialog=Gtk.Dialog(title=tr('System sichern & wiederherstellen'),transient_for=app.window)
     dialog.set_default_size(780,580)
     close=dialog.add_button(tr('Schließen'),Gtk.ResponseType.CLOSE)
-    box=dialog.get_content_area();box.set_spacing(10)
+    page=Gtk.ScrolledWindow();page.set_vexpand(True);dialog.get_content_area().pack_start(page,True,True,0)
+    box=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=10);page.add(box)
     note=Gtk.Label(label=tr('HTTPS: direkt zum Manager sichern, ohne Ordnerauswahl, SMB oder NFS. USB/NFS: separater Assistent für eine bereits eingehängte Ablage. Kein Festplattenabbild; Partitionierung und Bootloader bleiben separat.'),wrap=True);box.add(note)
+    full=Gtk.CheckButton(label=tr('Vollständiges Linux-System statt nur eigener Home-Daten sichern'));full.set_active(True);box.add(full)
+    box.add(Gtk.Label(label=tr('Standard: gemeinsamer PC-Systemstand und getrennte persönliche Daten. Zusätzliche Datenplatten und Serverfreigaben nur im ausdrücklich neu gesicherten Systemstand nach Auswahl.'),wrap=True))
+    refresh=Gtk.CheckButton(label=tr('Gemeinsamen PC-Systemstand neu sichern (Freigabe erforderlich)'));box.add(refresh)
+    box.add(Gtk.Label(label=tr('Ein vorhandener PC-Systemstand wird wiederverwendet. Persönliche Daten bleiben pro Benutzer getrennt und werden inkrementell gesichert. Nach System- oder Programmänderungen den gemeinsamen Stand ausdrücklich neu sichern. Andere Benutzer müssen ihr Home selbst sichern.'),wrap=True))
+    login=Gtk.Button(label=tr('Am Manager anmelden / Konto wechseln'));box.add(login)
+    def sign_in(_):
+        import extras_ui
+        extras_ui.manager_login(app,on_success=lambda:append(tr('Anmeldung übernommen. Sicherungsstatus erneut prüfen.')+'\n'))
+    login.connect('clicked',sign_in)
+    status_button=Gtk.Button(label=tr('Sicherungsstatus dieses PCs prüfen'));box.add(status_button)
+    cancel_system=Gtk.Button(label=tr('Unvollständige PC-Systemübertragung verwerfen (Freigabe erforderlich)'));box.add(cancel_system)
     source=Gtk.Entry();source.set_text('/');source.set_placeholder_text(tr('Linux-Quellsystem: / oder eingehängtes Offline-System'));box.add(Gtk.Label(label=tr('Linux-Quellsystem (Standard: laufender Client)')));box.add(source)
-    extra=Gtk.Entry();extra.set_placeholder_text(tr('Zusätzliche lokale Mountpunkte, getrennt durch ; (optional)'))
+    extra=Gtk.Entry();extra.set_placeholder_text(tr('Zusätzliche Datenplatten oder Serverfreigaben: Mountpunkte getrennt durch ; (optional)'))
     box.add(extra)
+    volumes=Gtk.Button(label=tr('Zusätzliche Datenplatten / Serverfreigaben auswählen'));box.add(volumes)
+    def choose_volumes(_):
+        try:
+            import system_stream
+            root=system_stream.source_root({'source_root':source.get_text().strip() or '/'})
+            rows=system_stream.relative_mounts(root,system_stream.mounts())
+            selected={p.strip() for p in extra.get_text().split(';') if p.strip()}
+            q=Gtk.Dialog(title=tr('Zusätzliche Datenplatten und Serverfreigaben'),transient_for=dialog,modal=True)
+            q.add_buttons(tr('Abbrechen'),Gtk.ResponseType.CANCEL,tr('Übernehmen'),Gtk.ResponseType.OK)
+            choices=[]
+            for row in rows:
+                if row.get('fstype') not in system_stream.BACKUP_FILESYSTEMS:continue
+                name=row['target'];check=Gtk.CheckButton(label=name+' · '+row['fstype'])
+                automatic=name in system_stream.SYSTEM_MOUNTS and row['fstype'] in system_stream.FILESYSTEMS
+                check.set_active(name in selected or automatic)
+                check.set_sensitive(not automatic);q.get_content_area().add(check);choices.append((name,check,automatic))
+            q.show_all()
+            if q.run()==Gtk.ResponseType.OK:extra.set_text('; '.join(name for name,check,automatic in choices if check.get_active() and not automatic))
+            q.destroy()
+        except Exception as exc:append(str(exc)+'\n')
+    volumes.connect('clicked',choose_volumes)
     private=Gtk.CheckButton(label=tr('Netzwerkprofile einschließlich Zugangsdaten mitsichern'));box.add(private)
-    box.add(Gtk.Label(label=tr('HTTPS: erster Lauf vollständig, danach neue Datenblöcke. Alle Quellen werden erneut gelesen. Native Programme, Flatpak, Homes und Systeminventar enthalten. Datenbanken/VMs/Container vorher geordnet stoppen.'),wrap=True))
-    scroll=Gtk.ScrolledWindow();scroll.set_vexpand(True)
+    box.add(Gtk.Label(label=tr('HTTPS: vorhandenen Systemstand prüfen, danach eigene persönliche Daten sichern. Neue Systemstände erfordern Administratorrechte im Manager oder die Benutzerfreigabe für Systemsicherungen. Datenbanken/VMs/Container vorher geordnet stoppen.'),wrap=True))
+    scroll=Gtk.ScrolledWindow();scroll.set_vexpand(True);scroll.set_size_request(-1,150)
     view=Gtk.TextView(editable=False,wrap_mode=Gtk.WrapMode.WORD_CHAR);scroll.add(view);box.pack_start(scroll,True,True,0)
     start=Gtk.Button(label=tr('USB/NFS-Assistent – lokale oder eingehängte Ablage'));box.add(start)
     state={'busy':False}
+    cancel=Gtk.Button(label=tr('Sicherung abbrechen'));cancel.set_sensitive(False);box.add(cancel)
+    def cancel_backup(_):
+        import backup
+        if backup.request_cancel():append(tr('Abbruch angefordert. Laufenden Abschnitt beenden und unvollständigen Stand aufräumen …')+'\n');cancel.set_sensitive(False)
+    cancel.connect('clicked',cancel_backup)
+    def cancel_state():
+        import backup
+        job=backup.CURRENT_BACKUP
+        cancel.set_sensitive(job is not None and not job.event.is_set())
+        return dialog.get_visible()
+    GLib.timeout_add(250,cancel_state)
     def append(text):
         buf=view.get_buffer();buf.insert(buf.get_end_iter(),text)
         view.scroll_to_iter(buf.get_end_iter(),0,False,0,0)
@@ -58,7 +102,7 @@ def open_dialog(app):
             picker.destroy()
         event.set();return False
     def finish(text):
-        append(text+'\n');state['busy']=False;close.set_sensitive(True);start.set_sensitive(True);server.set_sensitive(True);restore.set_sensitive(True);return False
+        append(text+'\n');state['busy']=False;cancel.set_sensitive(False);login.set_sensitive(True);close.set_sensitive(True);start.set_sensitive(True);server.set_sensitive(True);restore.set_sensitive(True);return False
     def run():
         try:
             process=subprocess.Popen(['pkexec','/bin/bash','/usr/lib/heimserver-manager-client/system-recovery.sh','--gui'],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,bufsize=1)
@@ -81,19 +125,30 @@ def open_dialog(app):
         question.format_secondary_text(tr('Dieser Ablauf verlangt einen eingehängten Sicherungsordner. Für direkte Übertragung zum Manager abbrechen und die HTTPS-Schaltfläche wählen.'))
         accepted=question.run()==Gtk.ResponseType.OK;question.destroy()
         if not accepted:return
-        state['busy']=True;close.set_sensitive(False);start.set_sensitive(False);server.set_sensitive(False);restore.set_sensitive(False)
+        state['busy']=True;login.set_sensitive(False);close.set_sensitive(False);start.set_sensitive(False);server.set_sensitive(False);restore.set_sensitive(False)
         threading.Thread(target=run,daemon=True).start()
     server=Gtk.Button(label=tr('Diesen Linux-Client direkt auf den Server sichern (HTTPS)'))
     box.pack_start(server,False,False,0)
     box.reorder_child(server,1)
     def server_start(_):
+        if app.busy or state['busy']:return
+        if not full.get_active():
+            import extras_ui,backup
+            if extras_ui.confirm(app,tr('Nur eigene Home-Daten auf den Server sichern? Eingebundene Laufwerke und Serverfreigaben bleiben ausgeschlossen. Dies ist eine Dateisicherung, keine Systemsicherung.')):
+                state['busy']=True;login.set_sensitive(False);close.set_sensitive(False);start.set_sensitive(False);server.set_sensitive(False);restore.set_sensitive(False)
+                def home_task():
+                    try:text=backup.create(Path.home(),lambda value:GLib.idle_add(append,value+'\n'))
+                    except Exception as exc:text=str(exc)
+                    GLib.idle_add(finish,text)
+                threading.Thread(target=home_task,daemon=True).start()
+            return
         question=Gtk.MessageDialog(transient_for=dialog,modal=True,message_type=Gtk.MessageType.QUESTION,buttons=Gtk.ButtonsType.OK_CANCEL,text=tr('Linux-System über HTTPS sichern?'))
-        question.format_secondary_text(tr('Vollständigen logischen Systemstand einschließlich Benutzer, Rechte und ausgewählter Datenträger übertragen. Unveränderte Blöcke werden wiederverwendet. Kein SMB/NFS und kein lokales Zwischenarchiv. Nicht ausgewählte Datenlaufwerke bleiben ausgeschlossen. Anwendungen und Datenbanken vorher beenden. Rücksicherung über „Systemarchiv vom Server wiederherstellen“ im Live-System; Zielpartitionen vorher passend einhängen. Partitionierung und Bootloader bleiben manuell.'))
+        question.format_secondary_text(tr('PC-Systemstand prüfen und wiederverwenden; nur eigene persönliche Daten separat sichern. Andere Benutzer-Homes bleiben ausgeschlossen. Neue Systemstände benötigen Administratorrechte oder eine ausdrückliche Benutzerfreigabe. Zusätzliche Datenträger werden nur beim neuen Systemstand berücksichtigt. Kein lokales Zwischenarchiv. System und persönliche Daten werden getrennt wiederhergestellt.')+'\n\n'+tr('Zusätzlich ausgewählt: ')+(extra.get_text().strip() or tr('Keine')))
         accepted=question.run()==Gtk.ResponseType.OK;question.destroy()
         if not accepted:return
         append(tr('HTTPS-Sicherung: Verbindung zum Manager prüfen; kein lokaler Zielordner erforderlich.\n'))
-        options={'source_root':source.get_text().strip() or '/','extra_mounts':[p.strip() for p in extra.get_text().split(';') if p.strip()],'network_profiles':private.get_active()}
-        state['busy']=True;close.set_sensitive(False);start.set_sensitive(False);server.set_sensitive(False);restore.set_sensitive(False)
+        options={'source_root':source.get_text().strip() or '/','extra_mounts':[p.strip() for p in extra.get_text().split(';') if p.strip()],'network_profiles':private.get_active(),'refresh_system':refresh.get_active()}
+        state['busy']=True;login.set_sensitive(False);close.set_sensitive(False);start.set_sensitive(False);server.set_sensitive(False);restore.set_sensitive(False)
         def task():
             try:
                 from system_https import create
@@ -101,6 +156,36 @@ def open_dialog(app):
             except Exception as exc:text=str(exc)
             GLib.idle_add(finish,text);GLib.idle_add(server.set_sensitive,True)
         threading.Thread(target=task,daemon=True).start()
+    def check_pc(_):
+        if state['busy']:return
+        def run_check():
+            try:
+                import backup
+                value=backup.call('pc-status')
+                text=tr('Gemeinsamer Systemstand: ')+(value['system']['created'] if value.get('system') else tr('Noch keiner'))+'\n'+tr('Eigene persönliche Sicherung: ')+(value['personal']['created'] if value.get('personal') else tr('Noch keine'))
+            except Exception as exc:text=str(exc)
+            GLib.idle_add(append,text+'\n')
+        threading.Thread(target=run_check,daemon=True).start()
+    status_button.connect('clicked',check_pc)
+    def discard_system(_):
+        if state['busy']:return
+        import extras_ui
+        if not extras_ui.confirm(app,tr('Nur die unvollständige gemeinsame Systemübertragung dieses PCs verwerfen? Laufende Sicherungen vorher beenden. Fertige Stände bleiben erhalten.')):return
+        def discard():
+            try:
+                import backup
+                value=backup.call('pc-status')
+                backup.call('cancel',{},query='&pc='+value['device_id'])
+                text=tr('Unvollständige PC-Systemübertragung verworfen.')
+            except Exception as exc:text=str(exc)
+            GLib.idle_add(append,text+'\n')
+        threading.Thread(target=discard,daemon=True).start()
+    cancel_system.connect('clicked',discard_system)
+    def scope_changed(*_):
+        enabled=full.get_active()
+        for widget in (source,extra,volumes,private,refresh):widget.set_sensitive(enabled)
+        server.set_label(tr('Diesen Linux-Client direkt auf den Server sichern (HTTPS)') if enabled else tr('Eigene Home-Daten auf den Server sichern (HTTPS)'))
+    full.connect('toggled',scope_changed);scope_changed()
     restore=Gtk.Button(label=tr('Systemstand / Komponenten / einzelne Dateien wiederherstellen'))
     box.pack_start(restore,False,False,0)
     def restore_start(_):

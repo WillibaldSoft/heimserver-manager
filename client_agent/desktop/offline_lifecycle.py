@@ -17,6 +17,7 @@ def reachable():
     except OSError:return False
 
 def run_event(event):
+    if offline.paused():return
     rows=[dict(r) for r in offline.config() if r.get('sync_'+event)]
     if not rows:return
     if event=='shutdown' and not reachable():record(event,'offline',tr('Server offline: Ausschalten ohne Abgleich.'));return
@@ -64,6 +65,7 @@ class Monitor:
     def tick(self):
         if self.shutting:return True
         try:
+            if offline.paused():self.release();return True
             rows=offline.config()
             if not self.started:
                 self.started=True

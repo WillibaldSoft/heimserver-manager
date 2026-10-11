@@ -46,7 +46,7 @@ def main():
   rows=[line.split(':') for line in (root/'etc/passwd').read_text().splitlines()]
   row=next((r for r in rows if len(r)==7 and r[0]==name),None)
   if not row or not row[2].isdigit() or int(row[2])<1000:raise ValueError(tr('Vorhandenen normalen Zielbenutzer angeben.'))
-  home=direct(str(root)+row[5]);home.relative_to(root)
+  home=direct(str(root/row[5].lstrip('/')));home.relative_to(root)
   print(str(home));print(row[2]);print(row[3])
  else:raise ValueError(tr('Unbekannte Prüfung.'))
 if __name__=='__main__':

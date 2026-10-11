@@ -11,8 +11,9 @@ class Users:
         if not isinstance(data,dict) or data.get('version')!=1 or not isinstance(data.get('revision'),str) or not isinstance(data.get('users'),dict):raise ValueError('Ungültige Manager-Benutzerkonfiguration. Notfallzugang bleibt erhalten.')
         for name,row in data['users'].items():
             if not isinstance(row,dict) or type(row.get('uid')) is not int or row['uid']<1000 or not isinstance(row.get('role'),str) or row.get('role') not in ROLES or type(row.get('enabled')) is not bool or not isinstance(row.get('revision'),str) or not isinstance(row.get('modules'),list) or any(not isinstance(m,str) or m not in policy.SCOPES for m in row['modules']):raise ValueError('Ungültige Manager-Benutzerrechte.')
+            if type(row.get('system_backup',False)) is not bool:raise ValueError('Ungültige Systemsicherungsfreigabe.')
         return data
-    def change(self,name,role,modules,enabled,expected,reserved,remove=False):
+    def change(self,name,role,modules,enabled,expected,reserved,remove=False,system_backup=False):
         self.path.parent.mkdir(parents=True,exist_ok=True)
         with self.path.with_suffix('.lock').open('a') as lock:
             os.chmod(lock.name,0o600);fcntl.flock(lock,fcntl.LOCK_EX)
@@ -26,7 +27,7 @@ class Users:
                 candidate=next((x for x in system.candidates() if x['name']==name),None)
                 if not candidate:raise ValueError('Kein lokales interaktives Benutzerkonto.')
                 if role not in ROLES or any(x not in policy.SCOPES for x in modules):raise ValueError('Ungültige Rolle oder Modulauswahl.')
-                data['users'][name]=dict(uid=candidate['uid'],role=role,modules=sorted(set(modules)) if role!='admin' else [],enabled=bool(enabled),revision=secrets.token_hex(16))
+                data['users'][name]=dict(uid=candidate['uid'],role=role,modules=sorted(set(modules)) if role!='admin' else [],enabled=bool(enabled),system_backup=bool(system_backup) if role=='user' and 'client' in modules else False,revision=secrets.token_hex(16))
             data['revision']=secrets.token_hex(16)
             fd,tmp=tempfile.mkstemp(dir=self.path.parent,prefix='.users-')
             try:
@@ -41,7 +42,7 @@ class Users:
             if not row or not row['enabled']:return None
             identity=system.identity(name,secret)
             if not identity or identity['uid']!=row['uid']:return None
-            return dict(kind='system',name=name,uid=row['uid'],role=row['role'],modules=row['modules'],revision=row['revision'],stamp=identity['stamp'])
+            return dict(kind='system',name=name,uid=row['uid'],role=row['role'],modules=row['modules'],system_backup=row.get('system_backup',False),revision=row['revision'],stamp=identity['stamp'])
         except (OSError,ValueError):return None
     def verify(self,name,password,secret):
         before=self.principal(name,secret)

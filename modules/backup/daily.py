@@ -1,6 +1,7 @@
 """Sequential daily snapshots. Local configuration only; no embedded host data."""
 import datetime,fcntl,gzip,json,os,shutil,sqlite3,subprocess,threading,time,uuid
 from pathlib import Path
+from contextlib import closing
 import server_settings as cfg
 LABELS={'oscam':'OSCam','nextcloud_config':'Nextcloud Config','nextcloud_apps':'Nextcloud Apps','nextcloud_db':'Nextcloud DB','server_manager':'Server Manager'}
 RUNNING=False
@@ -94,7 +95,7 @@ def snapshot(key):
         # SQLite online backup also includes committed data from WAL files.
         database=Path(os.environ.get('SERVER_MANAGER_DB',str(cfg.STATE_DIR/'server-manager.sqlite3')))
         if not database.is_file():raise ValueError('Manager-Datenbank fehlt.')
-        with sqlite3.connect('file:'+str(database)+'?mode=ro',uri=True) as src,sqlite3.connect(stage/'manager.sqlite3') as dst:
+        with closing(sqlite3.connect(database.resolve().as_uri()+'?mode=ro',uri=True)) as src,closing(sqlite3.connect(stage/'manager.sqlite3')) as dst, dst:
             src.backup(dst)
             if dst.execute('PRAGMA integrity_check').fetchone()[0]!='ok':raise ValueError('SQLite-Prüfung fehlgeschlagen.')
     else:raise ValueError('Unbekannte Sicherung')

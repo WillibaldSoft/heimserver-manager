@@ -1,3 +1,5 @@
+Linux client 0.4.29 (2026-10-11): Shared system snapshot per stable PC identity, with separate personal home backups per account/client. Before HTTPS backup, the client checks for a completed shared snapshot. It reuses that snapshot and rereads personal data, transmitting only new/changed 4-MiB blocks. Each personal snapshot remains fully downloadable. The shared snapshot excludes normal user homes and requires Manager administrator sign-in to create, refresh or download. Explicitly refresh it after system/application changes. Every user must back up their own home; missing personal backups are not silently collected from other accounts. Additional disks/shares are included only when selected for a new system snapshot. Personal homes must be below /home; network homes are not backed up automatically. Restore the system as administrator first, then restore personal snapshots separately; personal migration does not change system components. Old combined snapshots remain private to their original account/profile and are not automatically shared. Use the USB wizard for offline sources. Windows unchanged.
+
 SYSTEM BACKUP & RESTORE – LINUX CLIENT 0.3.3
 
 Open the same-named button under Own Client Backups on the client.
@@ -77,3 +79,5 @@ On proxy timeout after upload, the client checks the final status based on ident
    checked/configured separately before booting. Downloaded ZIP remains on workspace.
 If errors occur after start, a partial state may remain in the target. A full
 restore on real target hardware has not yet been validated.
+
+HTTPS system archives can now also use this migration workflow. See CLIENT_BACKUP_COMPARISON.txt for details and the feature comparison.

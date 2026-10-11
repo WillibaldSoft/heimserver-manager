@@ -14,6 +14,7 @@ After=network-online.target
 Wants=network-online.target
 [Service]
 DynamicUser=yes
+StateDirectory=server-manager-nextcloud-wake
 LoadCredential=config.json:/etc/server-manager-nextcloud-wake/config.json
 ExecStart=/usr/bin/python3 /opt/server-manager-nextcloud-wake/gateway.py
 Restart=on-failure
@@ -74,7 +75,7 @@ def save_draft(config,expected_revision):
 def info():
     if any(p.is_symlink() for p in (CONF,UNIT,PROGRAM)):raise ValueError('Abweichender Installationspfad; manuell prüfen.')
     installed=UNIT.exists()
-    if installed and UNIT.read_text()!=UNIT_TEXT:raise ValueError('Unbekannter Gateway-Dienst; keine Überschreibung.')
+    if installed and UNIT.read_text() not in (UNIT_TEXT, UNIT_TEXT.replace('StateDirectory=server-manager-nextcloud-wake\n','')):raise ValueError('Unbekannter Gateway-Dienst; keine Überschreibung.')
     status=subprocess.run(['systemctl','is-active','server-manager-nextcloud-wake.service'],capture_output=True,text=True,timeout=10).stdout.strip()
     return dict(installed=installed,active=status,revision=revision())
 def execute(plan,credentials):

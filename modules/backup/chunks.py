@@ -1,6 +1,6 @@
 """Per-account content-addressed ZIP snapshots. Immutable chunks, atomic manifests."""
 import datetime,hashlib,json,os,re,shutil,uuid,time
-from flask import request,jsonify,Response
+from flask import request,jsonify,Response,g
 MAX_CHUNK=4*1024**2
 MAX_REFS=262144
 FORMAT='client-cas-zip-v1'
@@ -56,10 +56,11 @@ def handle(root,action,quota,api):
             if len(api.listing(root))>=500:raise ValueError('Maximal 500 Sicherungsstände erreicht.')
             sid=uuid.uuid4().hex;folder=root/('.upload-'+sid);folder.mkdir(mode=0o700)
             data=request.get_json() or {}
-            api.save(folder/'manifest.json',dict(id=sid,format=FORMAT,created=datetime.datetime.now().astimezone().isoformat(),name=str(data.get('name','Linux-System'))[:120]))
+            api.save(folder/'manifest.json',dict(id=sid,format=FORMAT,created=datetime.datetime.now().astimezone().isoformat(),name=str(data.get('name','Linux-System'))[:120],source_host=api.source_host(data),**getattr(g,'backup_component',{})))
             return jsonify(id=sid)
         sid=api.identifier(request.args.get('id'));folder=api.direct(root/('.upload-'+sid))
         m=json.loads(api.direct(folder/'manifest.json').read_text())
+        if (folder/'cancel-requested').exists():raise ValueError('Sicherung abgebrochen.')
         if m.get('format')!=FORMAT:raise ValueError('Kein inkrementeller Auftrag.')
         os.utime(folder,None)
         if action=='block-put':
@@ -82,8 +83,10 @@ def handle(root,action,quota,api):
             valid_manifest(m)
             first=True
             for chunk in iterate(root,m,api.direct):
+                if (folder/'cancel-requested').exists():raise ValueError('Sicherung abgebrochen.')
                 if first and not chunk.startswith(b'PK\x03\x04'):raise ValueError('Kein ZIP-Sicherungsstrom.')
                 first=False
+            if (folder/'cancel-requested').exists():raise ValueError('Sicherung abgebrochen.')
             api.save(folder/'manifest.json',m);folder.rename(root/sid)
             return jsonify(ok=True,id=sid)
         raise ValueError('Unbekannte Blockaktion.')

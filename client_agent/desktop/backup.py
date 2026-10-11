@@ -3,7 +3,7 @@ try:
     from client_i18n import tr
 except ModuleNotFoundError:
     from client_agent.desktop.client_i18n import tr
-import contextlib,uuid,subprocess
+import contextlib,uuid,subprocess,socket,sys,re,threading,functools
 import io
 import datetime,hashlib,json,os,stat,tempfile,urllib.request,urllib.parse,urllib.error,zipfile,shutil
 from pathlib import Path
@@ -15,6 +15,53 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 # Account cookies stay in memory only and are bound to this exact server URL.
 ACCOUNT=None
 ACCOUNT_REQUIRED=False
+
+class Cancelled(core.Error):pass
+class BackupJob:
+    def __init__(self):self.event=threading.Event();self.callbacks=[]
+    def check(self):
+        if self.event.is_set():raise Cancelled(tr('Sicherung abgebrochen.'))
+    def cancel(self):
+        self.event.set()
+        for fn in list(self.callbacks):
+            try:fn()
+            except (OSError,ValueError):pass
+CURRENT_BACKUP=None
+BACKUP_LOCK=threading.Lock()
+def backup_running():return CURRENT_BACKUP is not None
+def request_cancel():
+    job=CURRENT_BACKUP
+    if job is None:return False
+    job.cancel();return True
+def check_cancel():
+    if CURRENT_BACKUP:CURRENT_BACKUP.check()
+def cancellable(fn):
+    @functools.wraps(fn)
+    def run(*args,**kwargs):
+        global CURRENT_BACKUP
+        with BACKUP_LOCK:
+            if CURRENT_BACKUP is not None:raise core.Error(tr('Eine Sicherung läuft bereits.'))
+            CURRENT_BACKUP=BackupJob()
+        try:return fn(*args,**kwargs)
+        finally:
+            with BACKUP_LOCK:CURRENT_BACKUP=None
+    return run
+def watch_upload(call,sid):
+    job=CURRENT_BACKUP
+    if not job:return lambda:None
+    def remote_abort():
+        def run():
+            try:call('abort',{},query='&id='+sid)
+            except Exception:pass # foreground reports whether cleanup is confirmed
+        threading.Thread(target=run,daemon=True).start()
+    job.callbacks.append(remote_abort)
+    if job.event.is_set():remote_abort()
+    return lambda:job.callbacks.remove(remote_abort)
+
+def abort_upload(call,sid):
+    result=call('abort',{},query='&id='+sid)
+    if result.get('completed'):return tr('Abbruch kam nach dem Abschluss; fertige Sicherung bleibt erhalten.')
+    return tr('Sicherung abgebrochen; unvollständige Übertragung entfernt. Fertige Stände bleiben erhalten.')
 
 def account_logout():
     global ACCOUNT,ACCOUNT_REQUIRED
@@ -54,6 +101,9 @@ def call(action,data=None,query='',binary=False):
     if ACCOUNT:
         server,opener,access=ACCOUNT
         if server!=url:raise core.Error(tr('Server geändert. Erneut am Manager anmelden.'))
+        if sys.platform=='linux':
+            import device_identity
+            headers.update(device_identity.headers())
         path='/api/account/backup';headers['X-Server-Manager-CSRF']=access['csrf']
         if data is not None and not access.get('backup'):raise core.Error(tr('Nur Lesen: Sicherung nicht freigegeben.'))
     else:
@@ -62,7 +112,9 @@ def call(action,data=None,query='',binary=False):
         path='/api/clients/backup';headers['Authorization']='Bearer '+cfg['TOKEN']
         import device_identity
         headers.update(device_identity.headers())
-    if isinstance(data,dict):data=json.dumps(data).encode();headers['Content-Type']='application/json'
+    if isinstance(data,dict):
+        if action in ('begin','cas-begin'):data=dict(data,source_host=socket.gethostname())
+        data=json.dumps(data).encode();headers['Content-Type']='application/json'
     elif data is not None:headers['Content-Type']='application/octet-stream'
     req=urllib.request.Request(url+path+'?action='+action+query,data,headers)
     try:
@@ -77,6 +129,12 @@ def call(action,data=None,query='',binary=False):
             elif message=='permission_denied':message=tr('Diese Aktion ist für dein Konto nicht freigegeben.')
             elif message in ('cross_origin_request','csrf_required'):message=tr('Sicherheitsprüfung der Anfrage fehlgeschlagen. Client aktualisieren und erneut anmelden.')
         raise core.Error(message) from None
+
+def download_query(item):
+    return '&id='+urllib.parse.quote(item['id'],safe='')+'&source_agent='+str(int(item.get('source_agent',0)))+('&pc='+urllib.parse.quote(item['shared_pc'],safe='') if item.get('shared_pc') else '')
+
+def snapshot_label(row):
+    return row['created']+' · '+(row.get('source_label') or row.get('source_host') or tr('Quell-PC unbekannt'))+' · '+row['name']
 
 def finish_upload(sid,size,sha,progress=lambda text:None):
     import time
@@ -107,6 +165,7 @@ class UploadStream(io.RawIOBase):
     def seekable(self):return False
     def tell(self):return self.offset+len(self.buffer)
     def write(self,data):
+        check_cancel()
         count=len(data);self.hash.update(data)
         view=memoryview(data)
         while view:
@@ -115,6 +174,7 @@ class UploadStream(io.RawIOBase):
         return count
     def flush(self):
         if self.buffer:
+            check_cancel()
             call('part',bytes(self.buffer),'&id='+self.sid+'&offset='+str(self.offset))
             self.offset+=len(self.buffer);self.buffer.clear()
             self.progress(tr('Direkt übertragen: ')+str(self.offset//1024**2)+' MiB')
@@ -140,6 +200,7 @@ class LocalStream:
     def tell(self):return self.offset
     def seekable(self):return False
     def write(self,data):
+        check_cancel()
         if self.folder.stat().st_dev!=self.device:raise core.Error(tr('Zieldatenträger wurde getrennt.'))
         if shutil.disk_usage(self.folder).free<len(data)+512*1024**2:raise core.Error(tr('Speicherreserve am Sicherungsziel erreicht.'))
         size=self.file.write(data);self.offset+=size;self.hash.update(data[:size]);return size
@@ -155,9 +216,18 @@ class LocalStream:
         if self.folder.exists() and self.folder.stat().st_dev==self.device:self.partial.unlink(missing_ok=True)
 
 
+def mount_boundaries():
+    """Include same-filesystem bind mounts and file mounts, without touching them."""
+    if sys.platform!='linux':return set()
+    text=Path('/proc/self/mountinfo').read_text()
+    return {Path(re.sub(r'\\([0-7]{3})',lambda m:chr(int(m.group(1),8)),line.split()[4]))
+            for line in text.splitlines() if len(line.split())>=6}
+
+@cancellable
 def create(source,progress=lambda s:None,destination=None):
     source=Path(source).resolve()
     if not source.is_dir() or source==Path('/'):raise core.Error(tr('Einen Benutzerordner wählen, nicht das gesamte System.'))
+    boundaries=mount_boundaries()
     if destination is not None:
         folder=Path(destination).resolve()
         if folder==source or folder.is_relative_to(source):raise core.Error(tr('Sicherungsziel darf nicht im gesicherten Ordner liegen.'))
@@ -167,16 +237,21 @@ def create(source,progress=lambda s:None,destination=None):
             raise core.Error(tr('Manager benötigt das Streaming-Backup-Update. Es wird kein lokales Zwischenarchiv erstellt.'))
         job=call('begin',dict(bytes=0,sha256='',name=source.name,stream=True));sid=job['id']
         target=UploadStream(sid,progress)
+    unwatch=watch_upload(call,sid) if sid else lambda:None
     try:
         skipped=0;count=0
         with zipfile.ZipFile(target,'w',zipfile.ZIP_DEFLATED,allowZip64=True) as archive:
             for root,dirs,files in os.walk(source,followlinks=False):
-                omitted=[d for d in dirs if (Path(root)/d).is_symlink() or os.path.ismount(Path(root)/d)]
+                check_cancel()
+                omitted=[d for d in dirs if (Path(root)/d) in boundaries or (Path(root)/d).is_symlink() or os.path.ismount(Path(root)/d)]
                 skipped+=len(omitted);dirs[:]=[d for d in dirs if d not in omitted]
                 if Path(root)!=source:
                     zi=zipfile.ZipInfo('files/'+str(Path(root).relative_to(source)).replace(os.sep,'/')+'/');zi.external_attr=(stat.S_IFDIR|0o700)<<16;archive.writestr(zi,b'')
                 for name in files:
-                    path=Path(root)/name;before=path.lstat()
+                    check_cancel()
+                    path=Path(root)/name
+                    if path in boundaries:skipped+=1;continue
+                    before=path.lstat()
                     if not stat.S_ISREG(before.st_mode):skipped+=1;continue
                     # O_NOFOLLOW rejects replacement with symlinks while collecting.
                     fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW)
@@ -194,14 +269,22 @@ def create(source,progress=lambda s:None,destination=None):
             archive.writestr('hsm-backup.json',json.dumps({'format':'client-zip-v1','source_name':source.name,'files':count,'skipped_special_files':skipped,'scope':'user-files'}))
         target.flush()
         progress(tr('Server prüft das Archiv …'))
+        check_cancel()
         if sid:finish_upload(sid,target.offset,target.hash.hexdigest(),progress)
         else:target.finish()
         return tr('Sicherung abgeschlossen: ')+str(count)+tr(' Dateien. Spezialdateien/Links nicht gesichert: ')+str(skipped)+tr('. Kein lokales Zwischenarchiv.')
     except Exception:
+        if CURRENT_BACKUP and CURRENT_BACKUP.event.is_set():
+            if sid:
+                target.buffer.clear()
+                try:return abort_upload(call,sid)
+                except Exception as exc:raise Cancelled(tr('Abbruch angefordert; Server-Aufräumen nicht bestätigt. Übertragung später verwerfen. ')+str(exc)) from None
+            target.abort();return tr('Lokale Sicherung abgebrochen; unvollständige Datei entfernt.')
         # Prevent destructor flush from retrying a failed upload.
         if sid:target.buffer.clear()
         else:target.abort()
         raise
+    finally:unwatch()
 
 def local_item(path):
     path=Path(path).resolve()
@@ -225,7 +308,7 @@ def restore(item,target,progress=lambda s:None,selected=''):
             archive=Path(tmp)/'files.zip';h=hashlib.sha256()
             if shutil.disk_usage(tmp).free<int(item['bytes'])+512*1024**2:
                 raise core.Error(tr('Zu wenig temporärer Speicher für dieses alte ZIP-Restore-Verfahren. Kein Download gestartet.'))
-            with call('download',query='&id='+item['id'],binary=True) as response,archive.open('wb') as out:
+            with call('download',query=download_query(item),binary=True) as response,archive.open('wb') as out:
                 count=0
                 for part in iter(lambda:response.read(CHUNK),b''):
                     if count+len(part)>int(item['bytes']) or shutil.disk_usage(tmp).free<len(part)+512*1024**2:raise core.Error(tr('Downloadgröße oder temporäre Speicherreserve überschritten.'))

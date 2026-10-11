@@ -85,3 +85,11 @@ class DraftUiTests(WakeTests):
    response=self.client.post('/apps/nextcloud/wake',data=dict(self.c,csrf=csrf,revision='rev',action='save_draft',health_path='/nextcloud/status.php'))
    self.assertEqual(303,response.status_code);start.assert_not_called();save.assert_called_once()
    self.assertNotIn('token',save.call_args.args[0])
+
+class LegacyUnitTests(InstallTests):
+ def test_known_previous_unit_is_recognized(self):
+  e.UNIT.write_text(e.UNIT_TEXT.replace('StateDirectory=server-manager-nextcloud-wake\n',''))
+  self.assertTrue(e.info()['installed'])
+ def test_modified_service_still_rejected(self):
+  e.UNIT.write_text(e.UNIT_TEXT.replace('ExecStart=/usr/bin/python3','ExecStart=/usr/bin/other'))
+  with self.assertRaises(ValueError):e.info()

@@ -17,7 +17,7 @@ try:
     from client_version import VERSION
 except ImportError:
     VERSION=tr('Entwicklungsstand')
-import extras_ui,connection,offline_ui,offline_lifecycle
+import extras_ui,connection,offline_ui,offline_lifecycle,user_ids_ui
 
 LABELS={'SERVER_URL':tr('Manager-Adresse (http:// oder https://)'),'TOKEN':tr('Agenten-Token'),'CLIENT_NAME':tr('Client-Name'),'CLIENT_MAC':tr('Client-MAC (optional)'),'IPMI_RECOVER_URL':tr('Recovery-Adresse (optional)'),'SERVER_MAC':tr('Server-MAC für Wake-on-LAN'),'WAKE_TIMEOUT':tr('Recovery-Timeout (1–300 Sekunden)')}
 MODES={'without_server':tr('Ohne Server starten'),'with_server':tr('Mit Server starten / Server benötigt'),'wake_on_access':tr('Nur auf ausdrücklichen Aufruf wecken')}
@@ -28,6 +28,8 @@ class App(Gtk.Application):
         self.window=None;self.entries={};self.busy=False;self.polling=False;self.indicator=None;self.connecting=False;self.connected=False
     def do_startup(self):
         Gtk.Application.do_startup(self);self.hold()
+        import offline
+        offline.resume()
         self.make_window();self.make_tray();self.offline_lifecycle=offline_lifecycle.Monitor(self);GLib.timeout_add_seconds(15,self.refresh);self.refresh()
     def do_command_line(self,command):
         args=command.get_arguments()
@@ -47,10 +49,12 @@ class App(Gtk.Application):
         self.notice=Gtk.Label(label=tr('Dienst arbeitet nach Aktivierung in deiner Benutzersitzung. Fenster schließen beendet den Agenten nicht.'),xalign=0);self.notice.set_line_wrap(True);outer.pack_start(self.notice,False,False,0)
         actions=Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE,max_children_per_line=3);outer.pack_start(actions,False,False,0)
         for label,action in [(tr('Server wecken'),'wake'),(tr('Server benötigt'),'need'),(tr('Server freigeben'),'release'),(tr('Wecken und verbinden'),'connect'),(tr('Zugriff vorbereiten'),'access')]:
-            button=Gtk.Button(label=label);button.connect('clicked',lambda _,a=action:self.run_action(lambda:core.action(a),connecting=True));actions.add(button)
-        note=Gtk.Label(label=tr('„Zugriff vorbereiten“ weckt und wartet auf den Server. Wie im bisherigen Skript wird kein Dateizugriff automatisch überwacht. Einmalige Bedarf/Freigabe-Aktionen werden beim nächsten Heartbeat wieder vom gewählten Modus bestimmt.'),xalign=0);note.set_line_wrap(True);outer.pack_start(note,False,False,0)
+            button=Gtk.Button(label=label);button.connect('clicked',lambda _,a=action:self.release_server() if a=='release' else self.run_action(lambda:core.action(a),connecting=True));actions.add(button)
+        note=Gtk.Label(label=tr('„Server freigeben“ pausiert den Serverbedarf und Offline-Abgleich bis zum nächsten Client-Start oder einer manuellen Umschaltung. „Zugriff vorbereiten“ weckt und wartet auf den Server. Dateizugriff wird nicht automatisch überwacht.'),xalign=0);note.set_line_wrap(True);outer.pack_start(note,False,False,0)
         scroll=Gtk.ScrolledWindow();scroll.set_policy(Gtk.PolicyType.NEVER,Gtk.PolicyType.AUTOMATIC);outer.pack_start(scroll,True,True,0)
-        grid=Gtk.Grid(column_spacing=12,row_spacing=8);scroll.add(grid)
+        setup=Gtk.Expander(label=tr('Anmeldung & Einrichtung'));setup.set_expanded(not core.CONFIG.exists());scroll.add(setup)
+        setup_box=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=10);setup.add(setup_box)
+        grid=Gtk.Grid(column_spacing=12,row_spacing=8);setup_box.pack_start(grid,False,False,0)
         for i,key in enumerate(core.KEYS):
             label=Gtk.Label(label=LABELS.get(key,tr('Betriebsmodus') if key=='CLIENT_MODE' else tr('Weckmethode')),xalign=0);grid.attach(label,0,i,1,1)
             if key in ('CLIENT_MODE','WAKE_METHOD'):
@@ -66,7 +70,10 @@ class App(Gtk.Application):
         change=Gtk.Button(label=tr('Ändern …'));change.connect('clicked',lambda _:self.change_hostname());hostbox.pack_start(change,False,False,0);grid.attach(hostbox,1,row,1,1)
         buttons=Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE,max_children_per_line=3);outer.pack_start(buttons,False,False,0)
         GLib.timeout_add_seconds(60,offline_ui.tick,self)
-        for label,callback in [(tr('Offline-Dateien'),lambda:offline_ui.show(self)),(tr('Am Manager anmelden / eigene Sicherungen'),lambda:extras_ui.manager_login(self)),(tr('Eigene Backups / Wiederherstellung'),lambda:extras_ui.backups(self)),(tr('Privates HTTPS'),lambda:extras_ui.https(self)),(tr('Server-Backup (Administrator)'),lambda:extras_ui.server(self)),(tr('Speichern'),self.save),(tr('Profil importieren'),self.import_profile),(tr('Bestehende Einstellungen laden'),self.reload),(tr('Agent aktivieren / übernehmen'),self.enable),(tr('Agent deaktivieren'),self.disable),(tr('Protokoll'),self.show_logs),(tr('Aktualisieren'),lambda:self.refresh())]:
+        setup_buttons=Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE,max_children_per_line=2);setup_box.pack_start(setup_buttons,False,False,0)
+        for label,callback in [(tr('Profil importieren'),self.import_profile),(tr('Privates HTTPS'),lambda:extras_ui.https(self)),(tr('Am Manager anmelden'),lambda:extras_ui.manager_login(self)),(tr('Benutzer & Gerät koppeln'),lambda:extras_ui.pair_device(self)),(tr('UID/GID verwalten'),lambda:user_ids_ui.show(self)),(tr('Speichern'),self.save),(tr('Bestehende Einstellungen laden'),self.reload),(tr('Agent aktivieren / übernehmen'),self.enable),(tr('Agent deaktivieren'),self.disable)]:
+            btn=Gtk.Button(label=label);btn.connect('clicked',lambda _,cb=callback:cb());setup_buttons.add(btn)
+        for label,callback in [(tr('Offline-Dateien'),lambda:offline_ui.show(self)),(tr('Eigene Backups / Wiederherstellung'),lambda:extras_ui.backups(self)),(tr('Server-Backup (Administrator)'),lambda:extras_ui.server(self)),(tr('Protokoll'),self.show_logs),(tr('Aktualisieren'),lambda:self.refresh())]:
             btn=Gtk.Button(label=label);btn.connect('clicked',lambda _,cb=callback:cb());buttons.add(btn)
         try:self.fill(core.load())
         except Exception:self.fill(core.DEFAULTS);self.notice.set_text(tr('Bestehende Konfiguration konnte nicht gelesen werden. JSON-Profil importieren; bisherige Dateien bleiben unverändert.'))
@@ -80,7 +87,12 @@ class App(Gtk.Application):
             else:entry.set_text(values.get(key,''))
     def values(self):return {k:(e.get_active_id() if isinstance(e,Gtk.ComboBoxText) else e.get_text()) for k,e in self.entries.items()}
     def save(self):
-        try:core.save(self.values());self.notice.set_text(tr('Gespeichert. Der nächste Heartbeat verwendet die Einstellungen. „Mit Server starten“ weckt bei der nächsten Anmeldung; jetzt bei Bedarf „Wecken und verbinden“ wählen.'));return True
+        try:
+            previous=core.load()['CLIENT_MODE'];values=self.values();core.save(values)
+            if previous!=values['CLIENT_MODE']:
+                import offline
+                offline.resume()
+            self.notice.set_text(tr('Gespeichert. Der nächste Heartbeat verwendet die Einstellungen. „Mit Server starten“ weckt bei der nächsten Anmeldung; jetzt bei Bedarf „Wecken und verbinden“ wählen.'));return True
         except Exception as exc:self.message(str(exc),True);return False
     def reload(self):
         try:self.fill(core.load());self.notice.set_text(tr('Bestehende Konfiguration geladen; noch nichts geändert.'))
@@ -101,7 +113,19 @@ class App(Gtk.Application):
     def tray_state(self):
         name='connecting' if self.connecting else ('online' if self.connected else 'offline')
         if self.indicator:self.indicator.set_icon_full(str(core.LIB/'icons'/(name+'.png')),{'connecting':tr('Verbindung wird hergestellt …'),'online':tr('Verbunden · Agenten-Anmeldung bestätigt'),'offline':tr('Keine bestätigte Agenten-Verbindung')}[name])
-    def run_action(self,fn,connecting=False):
+    def release_server(self):
+        # Releasing must remain available while an automatic sync owns busy.
+        if getattr(self,'releasing',False):return
+        self.releasing=True
+        def done(message):
+            self.releasing=False;self.notice.set_text(message);self.refresh();return False
+        def worker():
+            try:message=core.action('release')
+            except Exception as exc:message=str(exc)
+            GLib.idle_add(done,message)
+        threading.Thread(target=worker,daemon=True).start()
+
+    def run_action(self,fn,connecting=False,on_success=None):
         if self.busy:self.notice.set_text(tr('Eine Aktion läuft bereits. Bitte warten.'));return
         self.connecting=connecting;self.tray_state()
         self.busy=True;self.notice.set_text(tr('Aktion läuft … Aufwecken kann mehrere Minuten dauern.'))
@@ -113,7 +137,9 @@ class App(Gtk.Application):
             self.busy=False;self.connecting=False;self.tray_state();self.notice.set_text(result)
             if not error and fn==core.install_user:self.fill(core.load())
             if error:self.message(result,True)
-            self.refresh();return False
+            self.refresh()
+            if not error and on_success:on_success()
+            return False
         threading.Thread(target=worker,daemon=True).start()
     def refresh(self):
         if self.polling:return True
@@ -140,9 +166,35 @@ class App(Gtk.Application):
         if Indicator is None:self.notice.set_text(tr('Statussymbol nicht verfügbar. Das Fenster bleibt als Bedienoberfläche nutzbar.'));return
         self.indicator=Indicator.Indicator.new('heimserver-manager-client',str(core.LIB/'icons/offline.png'),Indicator.IndicatorCategory.APPLICATION_STATUS)
         menu=Gtk.Menu()
-        for label,fn in [(tr('Öffnen / Einstellungen'),self.do_activate),(tr('Server wecken'),lambda:self.run_action(lambda:core.action('wake'),connecting=True)),(tr('Server benötigt'),lambda:self.run_action(lambda:core.action('need'),connecting=True)),(tr('Server freigeben'),lambda:self.run_action(lambda:core.action('release'),connecting=True)),(tr('Statussymbol beenden (Agent läuft weiter)'),self.quit)]:
+        for label,fn in [(tr('Öffnen / Einstellungen'),self.do_activate),(tr('Server wecken'),lambda:self.run_action(lambda:core.action('wake'),connecting=True)),(tr('Server benötigt'),lambda:self.run_action(lambda:core.action('need'),connecting=True)),(tr('Server freigeben'),self.release_server),(tr('Statussymbol beenden (Agent läuft weiter)'),self.quit)]:
             item=Gtk.MenuItem(label=label);item.connect('activate',lambda _,cb=fn:cb());menu.append(item)
-        menu.show_all();self.indicator.set_menu(menu);self.indicator.set_status(Indicator.IndicatorStatus.ACTIVE)
+        self.offline_menu_item=Gtk.MenuItem(label=tr('Offline-Dateien'))
+        submenu=Gtk.Menu();self.offline_menu_item.set_submenu(submenu);menu.insert(self.offline_menu_item,4)
+        now=Gtk.MenuItem(label=tr('Jetzt synchronisieren'));now.connect('activate',lambda _:self.sync_offline_now());submenu.append(now)
+        submenu.append(Gtk.SeparatorMenuItem());self.offline_modes={};self.updating_offline_menu=False
+        for mode,label in [('interval','Alle 10 Minuten'),('startup','Nach Client-Start'),('manual','Nur manuell')]:
+            item=Gtk.CheckMenuItem(label=tr(label));item.set_draw_as_radio(True)
+            item.connect('activate',self.offline_schedule_selected,mode);submenu.append(item);self.offline_modes[mode]=item
+        menu.show_all();self.update_offline_menu();GLib.timeout_add_seconds(2,self.update_offline_menu)
+        self.indicator.set_menu(menu);self.indicator.set_status(Indicator.IndicatorStatus.ACTIVE)
+    def update_offline_menu(self):
+        import offline
+        try:
+            mode=offline.schedule_mode();self.offline_menu_item.set_visible(mode is not None)
+            self.updating_offline_menu=True
+            for key,item in self.offline_modes.items():item.set_active(key==mode)
+        except Exception:self.offline_menu_item.hide()
+        finally:self.updating_offline_menu=False
+        return True
+    def offline_schedule_selected(self,item,mode):
+        if self.updating_offline_menu:return
+        import offline
+        try:self.notice.set_text(offline.set_schedule(mode))
+        except Exception as exc:self.message(str(exc),True)
+        self.update_offline_menu()
+    def sync_offline_now(self):
+        import offline
+        self.run_action(lambda:offline.sync_many([r['id'] for r in offline.config()],lambda value:GLib.idle_add(self.notice.set_text,value)))
     def close_window(self,*args):
         if self.indicator:self.window.hide();return True
         self.quit();return False

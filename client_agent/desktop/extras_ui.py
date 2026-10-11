@@ -17,7 +17,7 @@ def confirm(app,text):
     d=Gtk.MessageDialog(transient_for=app.window,modal=True,message_type=Gtk.MessageType.QUESTION,buttons=Gtk.ButtonsType.OK_CANCEL,text=text)
     yes=d.run()==Gtk.ResponseType.OK;d.destroy();return yes
 
-def manager_login(app):
+def manager_login(app,on_success=None):
     if app.busy:app.message(tr('Zuerst die laufende Aktion abschließen.'));return
     d=Gtk.Dialog(title=tr('Am Manager anmelden'),transient_for=app.window,modal=True)
     d.add_buttons(tr('Abbrechen'),Gtk.ResponseType.CANCEL,tr('Anmelden'),Gtk.ResponseType.OK)
@@ -30,9 +30,8 @@ def manager_login(app):
     if ok:
         def run():
             access=backup.account_login(username,secret)
-            GLib.idle_add(lambda: (backups(app),False)[1])
             return tr('Angemeldet: ')+access['username']+' · '+(tr('Sichern und Wiederherstellen') if access['backup'] else tr('Nur Wiederherstellen'))
-        app.run_action(run)
+        app.run_action(run,on_success=on_success or (lambda:backups(app)))
 
 
 def pair_device(app):
@@ -47,11 +46,13 @@ def pair_device(app):
 def backups(app):
     d=Gtk.Dialog(title=tr('Eigene Client-Sicherungen'),transient_for=app.window);d.set_default_size(650,400);d.add_button(tr('Schließen'),Gtk.ResponseType.CLOSE)
     box=d.get_content_area();box.set_spacing(10)
-    note=Gtk.Label(label=tr('Dateibackup ausgewählter Benutzerordner. Kein vollständiges Systemabbild. Links, eingebundene Dateisysteme und Spezialdateien werden nicht gesichert. Rücksicherung immer in einen neuen Ordner. Konto-Anmeldung: eigene Benutzerablage. Ohne Konto-Anmeldung: bisheriges Agenten-Profil.'),wrap=True);box.add(note)
+    note=Gtk.Label(label=tr('Standard ist die vollständige Linux-Systemsicherung. Home oder einzelne Ordner lassen sich alternativ als Dateisicherung auswählen; diese enthalten keine Programme und keine Systemkonfiguration. Zusätzliche Datenplatten und Serverfreigaben nur ausdrücklich auswählen.'),wrap=True);box.add(note)
     box.add(Gtk.Label(label=(tr('Manager-Konto: ')+backup.ACCOUNT[2]['username']) if backup.ACCOUNT else tr('Bisheriges Agenten-Profil (Token)'),wrap=True))
     scope=Gtk.ComboBoxText()
-    scope.append('folder',tr('Ausgewählten Ordner sichern'));scope.append('home',tr('Eigenes Home einschließlich versteckter Einstellungen sichern'));scope.set_active(0);box.add(scope)
+    scope.append('system',tr('Vollständiges Linux-System (Standard)'));scope.append('folder',tr('Ausgewählten Ordner sichern'));scope.append('home',tr('Eigenes Home einschließlich versteckter Einstellungen sichern'));scope.set_active(0);box.add(scope)
     destination=Gtk.ComboBoxText();destination.append('server',tr('Direkt auf den Server'));destination.append('usb',tr('Direkt auf USB-Festplatte'));destination.set_active(0);box.add(destination)
+    def backup_scope_changed(*_):destination.set_sensitive(scope.get_active_id()!='system')
+    scope.connect('changed',backup_scope_changed);backup_scope_changed()
     choice=Gtk.ComboBoxText();box.add(choice);items={}
     box.add(Gtk.Label(label=tr('Rücksicherung: leer = gesamter Stand, sonst relativer Dateipfad oder Ordner aus der Sicherung.'),wrap=True))
     selected=Gtk.Entry();selected.set_placeholder_text(tr('z. B. Dokumente/Brief.odt oder Dokumente'));box.add(selected)
@@ -61,12 +62,21 @@ def backups(app):
             if status.get_realized():status.set_text(text)
             return False
         GLib.idle_add(update)
+    cancel=Gtk.Button(label=tr('Sicherung abbrechen'));cancel.set_sensitive(False);box.add(cancel)
+    def cancel_backup(_):
+        if backup.request_cancel():progress(tr('Abbruch angefordert. Laufenden Abschnitt beenden und unvollständigen Stand aufräumen …'))
+    cancel.connect('clicked',cancel_backup)
+    def cancel_state():
+        job=backup.CURRENT_BACKUP
+        cancel.set_sensitive(job is not None and not job.event.is_set())
+        return d.get_visible()
+    GLib.timeout_add(250,cancel_state)
     def refresh():
         def load():
             data=backup.call('list')['backups']
             def done():
                 choice.remove_all();items.clear()
-                for row in data:items[row['id']]=row;choice.append(row['id'],row['created']+' · '+row['name']+' · '+str(row['bytes']//1024**2)+' MiB')
+                for row in data:items[row['id']]=row;choice.append(row['id'],backup.snapshot_label(row)+' · '+str(row['bytes']//1024**2)+' MiB')
                 if data:choice.set_active(0)
                 status.set_text(str(len(data))+tr(' eigene Sicherungsstände'))
             GLib.idle_add(done);return tr('Client-Sicherungen geladen.')
@@ -75,6 +85,7 @@ def backups(app):
         if app.busy:app.message(tr('Zuerst die laufende Aktion abschließen.'));return
         backup.account_logout();d.response(Gtk.ResponseType.CLOSE)
     def create():
+        if scope.get_active_id()=='system':system_recovery(app);return
         src=str(Path.home()) if scope.get_active_id()=='home' else folder(d,tr('Benutzerordner sichern'))
         dest=folder(d,tr('Zielordner auf eingehängter USB-Festplatte')) if src and destination.get_active_id()=='usb' else None
         if destination.get_active_id()=='usb' and not dest:return
@@ -90,6 +101,9 @@ def backups(app):
             try:item=backup.local_item(path)
             except Exception as exc:app.message(str(exc),True);return
         if not item:app.message(tr('Zuerst einen Sicherungsstand auswählen.'));return
+        if not local and (item.get('component') in ('system','personal') or item.get('scope','').startswith('linux-system-tar-')):
+            from system_restore_ui import open_restore
+            open_restore(app,d,selected_id=item['id']);return
         parent=folder(d,tr('Übergeordneten Zielordner auswählen'))
         if not parent:return
         target=Path(parent)/('Wiederherstellung-'+item['id'][:12])

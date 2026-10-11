@@ -14,7 +14,7 @@ def register(app,users,accounts,shell,csrf_input,valid_csrf,reauth):
             if not valid_csrf():return shell('Manager-Benutzer','Formular abgelaufen.'),403
             if not reauth(request.form.get('current_password','')):return shell('Manager-Benutzer','Aktuelles Administratorpasswort nicht bestätigt.'),403
             try:
-                users.change(request.form.get('username',''),request.form.get('role',''),request.form.getlist('modules'),request.form.get('enabled')=='yes',request.form.get('revision',''),accounts.read()['username'],request.form.get('action')=='remove')
+                users.change(request.form.get('username',''),request.form.get('role',''),request.form.getlist('modules'),request.form.get('enabled')=='yes',request.form.get('revision',''),accounts.read()['username'],request.form.get('action')=='remove',system_backup=request.form.get('system_backup')=='yes')
                 message='Manager-Rechte gespeichert. Bisherige Sitzungen dieses Kontos sind abgemeldet. Das Linux-Konto und seine Dateirechte wurden nicht geändert.'
             except (ValueError,OSError) as exc:message=str(exc);status=400
         try:data=users.read();candidates=system.candidates()
@@ -38,6 +38,7 @@ def register(app,users,accounts,shell,csrf_input,valid_csrf,reauth):
                 body+=_ui_html("<label><input style='width:auto' type='checkbox' name='enabled' value='yes' ")+('checked' if row.get('enabled') else '')+_ui_html("> Zugang freigeben</label><label>Rolle <select name='role'>")
                 for key,label in ROLES.items():body+=_ui_html("<option value='")+key+"' "+('selected' if row.get('role','user')==key else '')+'>'+_ui_text(label)+_ui_html('</option>')
                 body+=_ui_html('</select></label><p>Administratoren haben vollständigen Zugriff. Für Benutzer und Nur-Lesen-Konten folgende Bereiche wählen:</p>')
+                body+="<p><label><input type='checkbox' name='system_backup' value='yes' "+('checked' if row.get('system_backup') else '')+"> "+E(_ui_text('PC-Systemsicherung und Systemwiederherstellung erlauben'))+"</label><br><small>"+E(_ui_text('Nur mit Rolle Benutzer und Eigene Clients & Sicherungen. Zugriff auf alle gemeinsamen PC-Systemstände, einschließlich sensibler Systemdateien und Dienst-Zugangsdaten. Persönliche Sicherungen anderer Benutzer und Server-Backups bleiben gesperrt.'))+"</small></p>"
                 for key,(label,url,note) in policy.SCOPES.items():
                     body+=_ui_html("<p><label><input style='width:auto' type='checkbox' name='modules' value='")+key+"' "+('checked' if key in row.get('modules',[]) else '')+"> "+E(_ui_text(label))+_ui_html("</label><br><small>")+E(_ui_text(note))+_ui_html('</small></p>')
             body+=_ui_html("<label>Dein aktuelles Administratorpasswort<input type='password' name='current_password' autocomplete='current-password' required maxlength='256'></label>")

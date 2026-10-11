@@ -1,3 +1,5 @@
+Linux-Client 0.4.29 (11.10.2026): Gemeinsamer Systemstand pro stabiler PC-Kennung, getrennte persönliche Home-Sicherungen pro Konto/Client. Vor dem HTTPS-Lauf wird geprüft, ob ein abgeschlossener gemeinsamer Stand existiert. Dieser wird wiederverwendet; persönliche Daten werden erneut gelesen, nur neue/geänderte 4-MiB-Blöcke übertragen. Jeder persönliche Stand bleibt vollständig abrufbar. Der gemeinsame Stand enthält keine normalen Benutzer-Homes und ist nur mit Manager-Administratoranmeldung anlegbar, aktualisierbar und abrufbar. Nach System-/Programmänderungen ausdrücklich neu sichern. Jeder Benutzer muss sein eigenes Home sichern; fehlende Benutzersicherungen werden nicht ungefragt aus fremden Konten erzeugt. Zusätzliche Platten/Freigaben nur nach Auswahl beim neuen Systemstand. Persönliches Home unter /home erforderlich; Netzwerk-Homes nicht automatisch sichern. Rücksicherung: System zuerst als Administrator, danach persönliche Stände getrennt; persönliche Migration verändert keine Systemkomponenten. Alte kombinierte Sicherungen bleiben privat im bisherigen Konto/Profil und werden nicht automatisch geteilt. Offline-Quellen weiter über USB-Assistent. Windows unverändert.
+
 SYSTEM SICHERN & WIEDERHERSTELLEN – LINUX-CLIENT 0.3.3
 
 Im Client unter Eigene Client-Sicherungen den gleichnamigen Button öffnen.
@@ -97,3 +99,5 @@ HTTPS-SYSTEMARCHIV WIEDERHERSTELLEN (AB CLIENT 0.3.3)
    separat prüfen/einrichten. Heruntergeladenes ZIP bleibt auf der Arbeitsplatte.
 Bei Fehlern nach Start kann ein Teilstand im Ziel verbleiben. Eine vollständige
 Rücksicherung auf echter Zielhardware wurde noch nicht validiert.
+
+HTTPS-Systemarchive können nun ebenfalls in diesen Migrationsablauf übernommen werden. Details und Funktionsvergleich: CLIENT_BACKUP_COMPARISON.txt.

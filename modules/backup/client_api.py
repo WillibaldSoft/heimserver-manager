@@ -2,7 +2,7 @@
 from ui_translation import html_literal as _ui_html, text as _ui_text
 import contextlib,datetime,fcntl,hashlib,json,os,re,shutil,time,uuid,tempfile,threading,html,subprocess
 from pathlib import Path
-from flask import request,jsonify,send_file,session,after_this_request,g
+from flask import request,jsonify,send_file,session,after_this_request,g,redirect
 import server_settings
 CHUNK=4*1024*1024
 RESERVE=2*1024**3
@@ -67,11 +67,52 @@ def listing(root):
         except (ValueError,OSError,KeyError):continue
     return sorted(rows,key=lambda x:x['created'],reverse=True)
 
+def source_host(data):
+    value=data.get('source_host','')
+    return value if isinstance(value,str) and re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]{0,252}',value) else ''
+
+def account_sources(ctx,principal,own):
+    """Account login may read its own paired PCs; device tokens stay isolated."""
+    roots={0:(own,principal['name'])}
+    if ctx is None or not hasattr(ctx,'db'):return roots
+    from modules.heimnetz_extra.client_bindings import key
+    con=ctx.db()
+    try:
+        if con.execute("SELECT count(*) FROM sqlite_master WHERE type='table' AND name IN ('client_bindings','client_agents')").fetchone()[0]!=2:return roots
+        rows=con.execute('SELECT b.agent_id,a.name FROM client_bindings b JOIN client_agents a ON a.id=b.agent_id WHERE b.account_key=?',(key(principal),)).fetchall()
+        for row in rows:
+            root=direct(own.parent/str(int(row['agent_id'])))
+            if root.is_dir():roots[int(row['agent_id'])]=(root,row['name'])
+        return roots
+    finally:con.close()
+
+def abort_one(root,sid):
+    """Stop only this immutable upload ID, never a newer or completed snapshot."""
+    from . import chunks
+    import sys
+    folder=direct(root/('.upload-'+identifier(sid)))
+    try:
+        fd=os.open(direct(folder/'cancel-requested'),os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600);os.close(fd)
+    except (FileNotFoundError,FileExistsError):pass
+    with locked(root):
+        if direct(root/sid).is_dir():return dict(ok=True,completed=True)
+        if folder.is_dir():shutil.rmtree(folder)
+        chunks.collect_unused(root,sys.modules[__name__])
+        return dict(ok=True,aborted=True)
+
 def register(app,ctx):
     @app.get('/api/account/access')
     def account_backup_access():
         p=g.auth_principal
-        return jsonify(username=p['name'],role=p['role'],backup=p['role'] in ('admin','user'),restore=True,csrf=session['auth_csrf'])
+        system_identity=None
+        if p.get('kind')=='system':
+            import pwd,grp
+            try:
+                user=pwd.getpwnam(p['name']);group=grp.getgrgid(user.pw_gid)
+                if user.pw_uid==p.get('uid') and 1000<=user.pw_uid<=59999 and 1000<=user.pw_gid<=59999:
+                    system_identity=dict(username=user.pw_name,uid=user.pw_uid,gid=user.pw_gid,group=group.gr_name)
+            except KeyError:pass
+        return jsonify(username=p['name'],role=p['role'],backup=p['role'] in ('admin','user'),restore=True,csrf=session['auth_csrf'],system_identity=system_identity)
 
     @app.route('/api/account/backup',methods=['GET','POST'])
     @app.route('/api/clients/backup',methods=['GET','POST'])
@@ -94,16 +135,43 @@ def register(app,ctx):
             activity=uuid.uuid4().hex;ACTIVE[activity]=True
             @after_this_request
             def release(response):
-                response.direct_passthrough=False
-                response.call_on_close(lambda:ACTIVE.pop(activity,None))
+                if response.is_streamed or response.direct_passthrough:
+                    response.direct_passthrough=False
+                    response.call_on_close(lambda:ACTIVE.pop(activity,None))
+                else:
+                    # JSON/control requests are finished now; only streamed archives
+                    # must hold the lease until the response is closed.
+                    ACTIVE.pop(activity,None)
                 response.headers['Cache-Control']='no-store'
                 return response
-            from . import chunks
+            from . import chunks,shared_pc
             import sys
+            pc=request.args.get('pc','')
+            if pc:
+                if not shared_pc.admin():return jsonify(error='Gemeinsamer Systemstand: Manager-Administrator oder Benutzer mit Systemsicherungsfreigabe anmelden.'),403
+                root=shared_pc.root(sys.modules[__name__],pc)
+                if action not in ('list','download','cancel','abort','cas-begin','cas-finish','block-has','block-put'):raise ValueError('Unbekannte PC-Sicherungsaktion.')
+            if action=='pc-status' and request.method=='GET':return jsonify(shared_pc.status(sys.modules[__name__],ctx,agent))
+            g.backup_component=shared_pc.metadata(sys.modules[__name__],ctx,agent,pc) if action=='cas-begin' else {}
+            if action=='abort' and request.method=='POST':return jsonify(abort_one(root,identifier(request.args.get('id'))))
             if action.startswith(('cas-','block-')):return chunks.handle(root,action,quota,sys.modules[__name__])
             if request.method=='GET':
-                if action=='list':return jsonify(backups=listing(root),quota_bytes=quota,scope='own-client',capabilities=['stream-zip-v1','system-cas-v1'])
+                if action=='list':
+                    sources=account_sources(ctx,g.auth_principal,root) if request.path=='/api/account/backup' and not pc else {0:(root,'')}
+                    rows=[]
+                    for aid,(location,label) in sources.items():
+                        rows.extend(dict(row,source_agent=aid,source_label=row.get('source_host') or label) for row in listing(location))
+                    if not pc:rows.extend(shared_pc.visible(sys.modules[__name__]))
+                    else:rows=[dict(row,shared_pc=pc) for row in rows]
+                    return jsonify(backups=sorted(rows,key=lambda r:r['created'],reverse=True),quota_bytes=quota,scope='own-account' if request.path=='/api/account/backup' else 'own-client',capabilities=['stream-zip-v1','system-cas-v1','own-pc-restore-v1','shared-pc-v1'])
                 if action=='download':
+                    aid=int(request.args.get('source_agent','0'))
+                    if pc and aid:raise ValueError('Ungültige gemeinsame Sicherungsquelle.')
+                    if aid:
+                        if request.path!='/api/account/backup':raise ValueError('Für Sicherungen eigener anderer PCs am Manager anmelden.')
+                        sources=account_sources(ctx,g.auth_principal,root)
+                        if aid not in sources:raise ValueError('Diese Sicherung gehört nicht zu deinem Konto.')
+                        root=sources[aid][0]
                     sid=identifier(request.args.get('id'));folder=direct(root/sid)
                     m=json.loads(direct(folder/'manifest.json').read_text())
                     if m.get('format')==chunks.FORMAT:return chunks.download(root,m,sys.modules[__name__])
@@ -123,7 +191,7 @@ def register(app,ctx):
                     if len(listing(root))>=500:raise ValueError('Maximal 500 Sicherungsstände. Administrator muss ältere Stände archivieren.')
                     if list(root.glob('.upload-*')):raise ValueError('Es besteht eine unvollständige Übertragung. Über „Übertragung verwerfen“ freigeben.')
                     sid=uuid.uuid4().hex;folder=root/('.upload-'+sid);folder.mkdir(mode=0o700)
-                    m=dict(id=sid,bytes=size,sha256=sha,received=0,stream=stream,created=datetime.datetime.now().astimezone().isoformat(),name=str(data.get('name','Dateisicherung'))[:120],format='client-zip-v1')
+                    m=dict(id=sid,bytes=size,sha256=sha,received=0,stream=stream,created=datetime.datetime.now().astimezone().isoformat(),name=str(data.get('name','Dateisicherung'))[:120],format='client-zip-v1',source_host=source_host(data))
                     save(folder/'manifest.json',m);(folder/'files.zip').touch(mode=0o600)
                     return jsonify(id=sid,chunk_bytes=CHUNK)
                 if action=='cancel':
@@ -152,17 +220,32 @@ def register(app,ctx):
                     if m['received']!=m['bytes']:raise ValueError('Übertragung unvollständig.')
                     h=hashlib.sha256()
                     with archive.open('rb') as f:
-                        for part in iter(lambda:f.read(CHUNK),b''):h.update(part)
+                        for part in iter(lambda:f.read(CHUNK),b''):
+                            if (folder/'cancel-requested').exists():raise ValueError('Sicherung abgebrochen.')
+                            h.update(part)
                     if h.hexdigest()!=m['sha256']:raise ValueError('Prüfsumme stimmt nicht.')
                     import zipfile
                     if not zipfile.is_zipfile(archive):raise ValueError('Kein ZIP-Archiv.')
                     save(folder/'manifest.json',m)
+                    if (folder/'cancel-requested').exists():raise ValueError('Sicherung abgebrochen.')
                     folder.rename(root/sid);return jsonify(ok=True,id=sid)
                 raise ValueError('Unbekannte Aktion.')
         except (ValueError,KeyError,TypeError,OSError,subprocess.SubprocessError) as exc:
             # Never disclose server paths or OS exception detail to client tokens.
             text=str(exc) if isinstance(exc,ValueError) else 'Sicherung nicht verfügbar. Eingaben oder Server-Speicher prüfen.'
-            return jsonify(error=text),400
+            return jsonify(error=_ui_text(text)),400
+
+    @app.post('/backup/desktop/abort')
+    def desktop_backup_abort():
+        if getattr(g,'auth_principal',{}).get('role')!='admin':return jsonify(error='permission_denied'),403
+        try:
+            guard();owner=request.form.get('owner','')
+            if not re.fullmatch(r'(?:-?[0-9]{1,80}|pc-[a-f0-9]{64})',owner):raise ValueError('Ungültige Sicherungsquelle.')
+            root=direct(Path(server_settings.get('system_backup_root'))/'desktop-client-backup'/owner)
+            if not root.is_dir():raise ValueError('Sicherungsquelle fehlt.')
+            abort_one(root,identifier(request.form.get('id')))
+            return redirect('/backup/desktop',code=303)
+        except (ValueError,OSError) as exc:return jsonify(error=_ui_text(str(exc)) if isinstance(exc,ValueError) else _ui_text('Sicherung nicht verfügbar.')),400
 
     @app.route('/backup/desktop',methods=['GET','POST'])
     def desktop_backup_admin():
@@ -177,6 +260,7 @@ def register(app,ctx):
             except (ValueError,OSError,subprocess.SubprocessError) as exc:message=str(exc)
         e=lambda v:html.escape(str(v),quote=True)
         body=_ui_html("<div class='card'><h2>Desktop-Client-Sicherungen</h2><p>Jeder Benutzer benötigt einen eigenen Eintrag unter Client-Agenten und sein eigenes JSON-Profil. Der Client-Token ermöglicht nur Zugriff auf die zugehörigen Client-Sicherungen, niemals auf Server-Sicherungen. Ein Profil nicht zwischen Benutzern teilen.</p><p>Speicherziel: ")+e(server_settings.get('system_backup_root'))+_ui_html("/desktop-client-backup · <a href='/settings/server-paths'>Server- und Modulpfade</a></p><p>Dateisicherungen und logische Linux-Systemstände über HTTPS. Client ab 0.4.0 überträgt bei Systemsicherungen nur neue 4-MiB-Blöcke; identische Blöcke bleiben pro Konto/Profil gemeinsam gespeichert. Jeder Stand ist vollständig abrufbar. Einzeldateien in neue Ordner; System/Komponenten aus dem Live-System. Kein Festplattenabbild; Partitionierung und Bootloader separat. Unvollständige Übertragungen werden nach 24 Stunden bei der nächsten Client-Anfrage bereinigt.</p><p>")+e(_ui_text(message))+_ui_html("</p><form method='post'><input type='hidden' name='auth_csrf' value='")+e(session.get('auth_csrf',''))+_ui_html("'><label><input type='checkbox' name='enabled' value='yes' ")+('checked' if conf.get('enabled') else '')+_ui_html("> Client-Backups aktivieren</label><label>Speicherlimit pro Client (GiB) <input type='number' name='quota_gib' min='1' max='10000' value='")+e(conf.get('quota_gib',100))+_ui_html("'></label><button>Speichern und Datenträger bestätigen</button></form><p>Server-Backups bleiben ausschließlich dem Manager-Administrator vorbehalten. Private HTTPS-Einrichtung wird empfohlen.</p><p><a href='/backup'>Backup & Recovery</a> · <a href='/clients'>Client-Agenten und Profile</a> · <a href='/settings/https'>HTTPS-Zugang</a></p></div>")
+        body+=_ui_html('<div class="card"><p>Mit Manager-Anmeldung sind eigene Kontosicherungen und Sicherungen der eigenen gekoppelten PCs geräteübergreifend verfügbar. Fremde Benutzer bleiben getrennt. Ein reines Agenten-Token bleibt auf seinen Client beschränkt. Linux-Client ab 0.4.22: Daten und Programme eines anderen PCs über Migration im laufenden Zielsystem übernehmen, mit lokaler Administratorfreigabe und Bestätigung bei angemeldetem Zielbenutzer. Client-Identität und Anmeldung des Ziel-PCs bleiben erhalten. Vollständige Systemdateirücksicherung weiterhin vom Live-USB.</p></div>')
         root=direct(Path(server_settings.get('system_backup_root'))/'desktop-client-backup')
         body+=_ui_html("<div class='card'><h3>Gespeicherte Client-Sicherungen</h3><table><tr><th>Konto / Client</th><th>Stände</th><th>Logische Größe aller Stände</th><th>Belegter Speicher</th></tr>")
         from . import chunks
@@ -189,7 +273,17 @@ def register(app,ctx):
         except (KeyError,ValueError,OSError):pass
         if root.is_dir():
             for folder in sorted(root.iterdir()):
-                if re.fullmatch('-?[0-9]+',folder.name) and folder.is_dir() and not folder.is_symlink():
+                if re.fullmatch(r'(?:-?[0-9]+|pc-[a-f0-9]{64})',folder.name) and folder.is_dir() and not folder.is_symlink():
                     rows=listing(folder);body+=_ui_html('<tr><td>')+e(labels.get(folder.name,_ui_text('Konto (nicht mehr zugeordnet)') if folder.name.startswith('-') else 'Client '+folder.name))+_ui_html('</td><td>')+str(len(rows))+_ui_html('</td><td>')+str(sum(r['bytes'] for r in rows)//1024**2)+_ui_html(' MiB</td><td>')+str(chunks.used(folder)//1024**2)+_ui_html(' MiB</td></tr>')
         body+=_ui_html('</table></div>')
+        body+=_ui_html('<div class="card"><h3>Laufende / unvollständige Client-Sicherungen</h3><p>Abbrechen stoppt nur die gewählte Übertragung. Fertige Stände bleiben erhalten. Der Client erhält beim nächsten Abschnitt eine Abbruchmeldung.</p>')
+        for upload in sorted(root.glob('*/.upload-*')) if root.is_dir() else []:
+            if upload.is_symlink() or upload.parent.is_symlink():continue
+            sid=upload.name.removeprefix('.upload-')
+            if not re.fullmatch('[a-f0-9]{32}',sid):continue
+            try:m=json.loads(direct(upload/'manifest.json').read_text())
+            except (OSError,ValueError):continue
+            label=m.get('source_host') or labels.get(upload.parent.name,upload.parent.name)
+            body+='<form method="post" action="/backup/desktop/abort"><input type="hidden" name="auth_csrf" value="'+e(session.get('auth_csrf',''))+'"><input type="hidden" name="owner" value="'+e(upload.parent.name)+'"><input type="hidden" name="id" value="'+e(sid)+'"><span>'+e(label)+' · '+e(m.get('name',''))+'</span> <button>'+e(_ui_text('Sicherung abbrechen'))+'</button></form>'
+        body+='</div>'
         return ctx.page(_ui_text('Client-Sicherungen'),body,'Daten')

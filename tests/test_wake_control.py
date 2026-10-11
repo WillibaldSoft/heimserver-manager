@@ -48,3 +48,27 @@ class WakeControlTests(unittest.TestCase):
  def test_recovery_source_unaffected(self):
   from tools.power_api import power_api
   self.assertFalse(hasattr(power_api,'wake_enabled'))
+
+class SeparateWakeTests(WakeControlTests):
+ def test_independent_service_windows_and_legacy(self):
+  ui.save(dict(mode='inactive'));self.assertFalse(gateway.wake_enabled('davx'))
+  policy=ui.parse(dict(mode='schedule',default='inactive',start0='08:00',end0='10:00',state0='active'))
+  ui.save(dict(services=dict(nextcloud=dict(mode='inactive'),davx=policy)))
+  with patch.object(gateway.time,'localtime',return_value=time.struct_time((2026,10,11,9,0,0,6,284,0))):
+   self.assertTrue(gateway.wake_enabled('davx'));self.assertFalse(gateway.wake_enabled('nextcloud'))
+   self.assertTrue(ui.wake_enabled('davx'))
+ def test_counter_persistence_and_separation(self):
+  path=Path(self.tmp.name)/'counts.json';c=gateway.Counters(path)
+  c.add('davx','requests');c.add('davx','blocked');c.add('nextcloud','recovery_requested');c.flush(force=True)
+  restored=gateway.Counters(path)
+  self.assertEqual(restored.data['services']['davx']['blocked'],1)
+  self.assertNotIn('recovery_requested',restored.data['services']['davx'])
+  self.assertEqual(restored.data['services']['nextcloud']['recovery_requested'],1)
+ def test_disabled_service_cannot_join_another_wake(self):
+  ui.save(dict(services=dict(nextcloud=dict(mode='active'),davx=dict(mode='inactive'))))
+  async def check():
+   obj=gateway.Gateway(dict());obj.ready=AsyncMock(return_value='unreachable');obj.waking=asyncio.create_task(asyncio.sleep(0,result=True))
+   token=gateway.WAKE_KIND.set('davx')
+   try:self.assertFalse(await obj.ensure_ready());await obj.waking
+   finally:gateway.WAKE_KIND.reset(token)
+  asyncio.run(check())

@@ -7,12 +7,27 @@ import core,backup,device_identity
 from client_i18n import tr
 ROOT=Path.home()/'.config/server-manager-client/offline'
 RUN_LOCK=threading.Lock()
+PAUSE_FILE=ROOT/'paused'
+def paused():return PAUSE_FILE.exists()
+def require_running():
+    if paused():raise core.Error(tr('Offline-Abgleich pausiert: Server freigegeben. Mit „Server benötigt“ fortsetzen.'))
+def pause():
+    core.atomic(PAUSE_FILE,'paused\n')
+    failures=[]
+    for row in config():
+        try:call('release',row['id'],data=b'')
+        except Exception:failures.append(row['id'])
+    return failures
+def resume():
+    PAUSE_FILE.unlink(missing_ok=True)
+
 def digest(path):
     with open(path,'rb') as f:return hashlib.file_digest(f,'sha256').hexdigest() if hasattr(hashlib,'file_digest') else backup.digest(path)
 def config():
     return json.loads((ROOT/'folders.json').read_text()) if (ROOT/'folders.json').exists() else []
 def save_config(rows):core.atomic(ROOT/'folders.json',json.dumps(rows))
 def call(action,gid='',path='',sha='',data=None,binary=False,exclude='',content_sha=''):
+    if action not in ('release','list','browse'):require_running()
     cfg=core.validate(core.load())
     if not cfg['SERVER_URL'].startswith('https://'):raise core.Error(tr('Offline-Dateien benötigen HTTPS.'))
     query=urllib.parse.urlencode(dict(action=action,id=gid,path=path,sha=sha,exclude=exclude,content_sha=content_sha))
@@ -22,7 +37,9 @@ def call(action,gid='',path='',sha='',data=None,binary=False,exclude='',content_
         headers['Content-Length']=str(os.fstat(data.fileno()).st_size) if hasattr(data,'fileno') else str(len(data))
     req=urllib.request.Request(cfg['SERVER_URL']+'/api/clients/offline?'+query,data=data,headers=headers)
     try:
-        r=urllib.request.build_opener(backup.NoRedirect).open(req,timeout=300)
+        r=urllib.request.build_opener(backup.NoRedirect).open(req,timeout=3 if action=='release' else 300)
+        if action=='lease' and paused():
+            r.close();call('release',gid,data=b'');require_running()
         if binary:return r
         with r:return json.load(r)
     except urllib.error.HTTPError as e:
@@ -75,7 +92,30 @@ def sync(row,progress=lambda s:None):
             return _sync(row,progress)
     finally:RUN_LOCK.release()
 
+class SyncProgress:
+    def __init__(self,callback,total,files):
+        self.callback=callback;self.total=total;self.files=files;self.done=0;self.finished=0;self.started=time.monotonic();self.last=0
+    def show(self,name,current=0,force=False):
+        now=time.monotonic()
+        if not force and now-self.last<0.5:return
+        self.last=now;amount=min(self.total,self.done+current)
+        percent=min(99,100*amount/self.total) if self.total else min(99,100*self.finished/max(1,self.files))
+        elapsed=now-self.started
+        eta=tr('Restzeit wird berechnet')
+        if amount and elapsed>=3:
+            seconds=max(0,(self.total-amount)*elapsed/amount)
+            eta=tr('Geschätzte Restzeit: ')+str(int(seconds//60))+tr(' min ')+str(int(seconds%60))+tr(' s')
+        self.callback(f'{percent:.0f}% · {amount/1024**2:.1f} / {self.total/1024**2:.1f} MiB · '+eta+'\n'+name)
+    def complete_file(self,size):self.done+=size;self.finished+=1
+
+class ProgressReader:
+    def __init__(self,stream,callback):self.stream=stream;self.callback=callback;self.high=0
+    def __getattr__(self,name):return getattr(self.stream,name)
+    def read(self,*args):
+        require_running();data=self.stream.read(*args);self.high=max(self.high,self.stream.tell());self.callback(self.high);return data
+
 def _sync(row,progress):
+    require_running()
     cfg=core.validate(core.load());gid=row['id'];root=Path(row['local']).absolute()
     offline_mounts.validate_local(root,row.get('source_mount'))
     if row.get('wake'):core.action('access')
@@ -96,32 +136,47 @@ def _sync(row,progress):
     call('lease',gid,data=b'')
     def renew():
         while not stop.wait(30):
+            if paused():
+                try:call('release',gid,data=b'')
+                except Exception:pass
+                errors.append(True);return
             try:call('lease',gid,data=b'')
             except Exception:errors.append(True);return
     worker=threading.Thread(target=renew,daemon=True);worker.start()
     try:
         excluded=[x.strip().strip('/') for x in row.get('exclude','').split(',') if x.strip()]
         for x in excluded:relative(x)
-        remote={v['path']:v for v in call('scan',gid,exclude=row.get('exclude',''))['files']};local=local_scan(root,excluded)
+        progress(tr('Serverbestand und Prüfsummen werden geprüft …'))
+        remote={v['path']:v for v in call('scan',gid,exclude=row.get('exclude',''))['files']}
+        progress(tr('Lokaler Bestand und Prüfsummen werden geprüft …'))
+        local=local_scan(root,excluded)
         def selected(name):return not any(name==x or name.startswith(x+'/') for x in excluded)
         remote={k:v for k,v in remote.items() if selected(k)};local={k:v for k,v in local.items() if selected(k)}
         maximum=int(row.get('limit_gib',10))*1024**3
         if sum(v['size'] for v in remote.values())+sum(v['size'] for k,v in local.items() if k not in remote)>maximum:raise core.Error(tr('Lokales Speicherlimit überschritten.'))
+        names=[n for n in sorted(set(base)|set(local)|set(remote)) if selected(n)]
+        sizes={}
+        for n in names:
+            action=decision(base.get(n),(local.get(n) or {}).get('sha'),(remote.get(n) or {}).get('sha'),row.get('write',False),row.get('delete',False))
+            sizes[n]=(remote[n]['size'] if action=='get' else local[n]['size'] if action=='put' else 0)
+        meter=SyncProgress(progress,sum(sizes.values()),len(names))
         conflicts=[];changed=0
         for name in sorted(set(base)|set(local)|set(remote)):
             if not selected(name):continue
+            require_running()
             if errors:raise core.Error(tr('Schlafblocker konnte nicht erneuert werden.'))
             relative(name);l=(local.get(name) or {}).get('sha');r=(remote.get(name) or {}).get('sha')
             action=decision(base.get(name),l,r,row.get('write',False),row.get('delete',False))
-            progress(name+' · '+action)
+            meter.show(name+' · '+action,force=True)
             p=root.joinpath(*relative(name))
             if action in ('conflict','pending-delete'):
-                conflicts.append(name);continue
+                conflicts.append(name);meter.complete_file(0);continue
             if action=='put':
                 if p.is_symlink() or digest(p)!=l:raise core.Error('Local file changed')
                 call('lease',gid,data=b'')  # recheck the assignment before each change
                 with p.open('rb') as src:
-                    result=smb.mutate(name,r or '',src,sha=l) if smb else call('put',gid,name,r or '',src,content_sha=l)
+                    reader=ProgressReader(src,lambda count:meter.show(name,min(count,sizes[name])))
+                    result=smb.mutate(name,r or '',reader,sha=l) if smb else call('put',gid,name,r or '',reader,content_sha=l)
                 if result.get('sha')!=l:raise core.Error('Upload confirmation mismatch')
                 r=l;changed+=1
             elif action=='delete':
@@ -143,9 +198,10 @@ def _sync(row,progress):
                         with os.fdopen(fd,'wb') as dst,call('get',gid,name,r,binary=True) as src:
                             count=0
                             for data in iter(lambda:src.read(1024*1024),b''):
+                                require_running()
                                 count+=len(data)
                                 if count>size:raise core.Error('Download too large')
-                                dst.write(data)
+                                dst.write(data);meter.show(name,count)
                             dst.flush();os.fsync(dst.fileno())
                         if digest(tmp)!=r:raise core.Error('Download checksum mismatch')
                         if (digest(p) if p.exists() else None)!=l:raise core.Error('Local file changed')
@@ -158,8 +214,10 @@ def _sync(row,progress):
             if r:base[name]=r
             else:base.pop(name,None)
             core.atomic(state,json.dumps(base))
+            meter.complete_file(sizes[name])
         if row.get('_require_clean') and conflicts:raise core.Error('Resolve synchronization conflicts before completing this action')
-        return tr('Abgleich beendet. Änderungen: ')+str(changed)+tr(' · Konflikte / ausstehende Löschungen: ')+str(len(conflicts))+ ('\n'+'\n'.join(conflicts[:30]) if conflicts else '')
+        progress(('100% · '+tr('Abgleich abgeschlossen.')) if not conflicts else tr('Durchlauf beendet; Konflikte bleiben offen.'))
+        return ('100% · ' if not conflicts else '')+tr('Abgleich beendet. Änderungen: ')+str(changed)+tr(' · Konflikte / ausstehende Löschungen: ')+str(len(conflicts))+ ('\n'+'\n'.join(conflicts[:30]) if conflicts else '')
     finally:
         stop.set();worker.join(timeout=1)
         try:call('release',gid,data=b'')
@@ -172,6 +230,7 @@ def retain(root,path):
 
 _LAST={}
 def due():
+    if paused():return None
     now=time.monotonic()
     for row in config():
         minutes=int(row.get('interval',0))
@@ -222,3 +281,22 @@ def sync_many(selected,progress=lambda s:None):
                 results.append(name+'\n'+result)
             return '\n\n'.join(results)
     finally:RUN_LOCK.release()
+
+
+def schedule_mode():
+    rows=config()
+    if not rows:return None
+    for mode,interval,startup in [('interval',10,False),('startup',0,True),('manual',0,False)]:
+        if all(int(r.get('interval',0))==interval and bool(r.get('sync_startup'))==startup and not r.get('sync_shutdown') for r in rows):return mode
+    return 'custom'
+
+def set_schedule(mode):
+    if mode not in ('interval','startup','manual'):raise ValueError('Unknown synchronization schedule')
+    rows=config()
+    for row in rows:
+        row.update(interval=10 if mode=='interval' else 0,sync_startup=mode=='startup',sync_shutdown=False)
+    save_config(rows)
+    # Scheduling is separate from the explicit immediate action.
+    now=time.monotonic()
+    for row in rows:_LAST[row['id']]=now
+    return tr('Offline-Zeitplan für alle eingerichteten Ordner gespeichert.')

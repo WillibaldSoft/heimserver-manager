@@ -1,8 +1,8 @@
 {
   "CHANGELOG.md": {
     "english": "docs/en/CHANGELOG.md",
-    "english_sha256": "b6d908e253c1d9265194ca1c9d8467f5ce78fb58e66723f5d18c5b0a9cb3ca31",
-    "source_sha256": "6c3827fcb73c0b92b4c1da84b03a43f3d4d658978dc3aaa472543b2aa1e4c252"
+    "english_sha256": "a0db5a62383f35a082ab575976b9e63e31d14b02cb1a306a4060230449704d1b",
+    "source_sha256": "cebb6067926df755813170629e708fbfa4070cecfc1a5937ffed9c443a8b780c"
   },
   "LICENSE_NOTICE.md": {
     "english": "docs/en/LICENSE_NOTICE.md",
@@ -109,10 +109,15 @@
     "english_sha256": "dd5ff8ed1370447c1d50f088aaa0c1ea4fb28b65554e053526b1c8206f693206",
     "source_sha256": "dcad3535657e6c75677b25cc55bf5c57dee8f40f9a525c62b58081952a93cdb0"
   },
+  "docs/CLIENT_BACKUP_COMPARISON.txt": {
+    "english": "docs/en/CLIENT_BACKUP_COMPARISON.txt",
+    "english_sha256": "782cc77942baa7a9007416ddac87c92d085c0c5e33c2e20c8bc30952e5fc0747",
+    "source_sha256": "33dfd05ad8c405fd634f42d4008e0c3f0dc30e17c3cceb4dadf0ea6d3aba86af"
+  },
   "docs/CLIENT_SYSTEM_RECOVERY.txt": {
     "english": "docs/en/CLIENT_SYSTEM_RECOVERY.txt",
-    "english_sha256": "e844f7dca8bb0de86ba8caa71389d157ae928db4c028e18275a7cf90cef0ee77",
-    "source_sha256": "3d180b56df3dba7a1c7b6393a47b6c40aee7350b41c81b3e673bb34a9b11620f"
+    "english_sha256": "35242b70920ecb362a01e324adb7d79939ed3b93bc75f24ff8d9254b19645e75",
+    "source_sha256": "8fe8adf9dcee379c12511dd1081e5135c28bc25bae0be07aee02f7467c95872a"
   },
   "docs/DEBIAN_PACKAGE.md": {
     "english": "docs/en/DEBIAN_PACKAGE.md",
@@ -166,18 +171,18 @@
   },
   "docs/HTTPS_SYSTEM_BACKUP.txt": {
     "english": "docs/en/HTTPS_SYSTEM_BACKUP.txt",
-    "english_sha256": "ecb96593941071fc8f1cc494c24f1acf4d24034afb928b415914f662cfd2e5de",
-    "source_sha256": "dee6a8ff44fe07eb5afb62a5c647e1cfd373c00f431f6932ef93d42c0f38b832"
+    "english_sha256": "7470c30345d5c8aa73ea0cdca4c46e12d74de20e56d02a88c2ddb5a94946e0d5",
+    "source_sha256": "69269115f3c1f984ae6173f66d5c33e813bbf8f329756822fa28fb19c2106e44"
   },
   "docs/Heimserver_Manager_Funktionsuebersicht.txt": {
     "english": "docs/en/Home_Server_Manager_Features.txt",
-    "english_sha256": "34cb62ac5008dd5ce220a4ea3911bef88123fe45e630c9397ae35c2c59c1c68f",
-    "source_sha256": "9c4de9d2a1d2ed13215fa34ad60959d5de0b3cfa04e53f18f0e1aeeac11680f5"
+    "english_sha256": "6aef463452e0849943300b397c65ebbd479096732e6771f138e53c46435104fd",
+    "source_sha256": "f675a47248b44d976596a5ddd9171af348bb0b6a3c5d83dacf1637697ba9ed3c"
   },
   "docs/Heimserver_Manager_Versionsaenderungen.txt": {
     "english": "docs/en/Home_Server_Manager_Version_History.txt",
-    "english_sha256": "4174feeb6de3b5c8cbb46b15ba32d2e654c0590af1e09554b409394f0c556570",
-    "source_sha256": "30e0866a9645871367defe7c6230df56bb6579303936f75ebd9acb31bba8ba42"
+    "english_sha256": "48b8db65be4427f0b6f924c05425fbd4659e93c90d450da34dc599ad98d5d074",
+    "source_sha256": "f7779c34c856a1a8dd9b9f14f232a4a23479b071512b9b3df9079682ae8f0c59"
   },
   "docs/Installer.md": {
     "english": "docs/en/Installer.md",

@@ -1,0 +1,129 @@
+Linux client 0.4.29 (2026-10-11): Shared system snapshot per stable PC identity, with separate personal home backups per account/client. Before HTTPS backup, the client checks for a completed shared snapshot. It reuses that snapshot and rereads personal data, transmitting only new/changed 4-MiB blocks. Each personal snapshot remains fully downloadable. The shared snapshot excludes normal user homes and requires Manager administrator sign-in to create, refresh or download. Explicitly refresh it after system/application changes. Every user must back up their own home; missing personal backups are not silently collected from other accounts. Additional disks/shares are included only when selected for a new system snapshot. Personal homes must be below /home; network homes are not backed up automatically. Restore the system as administrator first, then restore personal snapshots separately; personal migration does not change system components. Old combined snapshots remain private to their original account/profile and are not automatically shared. Use the USB wizard for offline sources. Windows unchanged.
+
+CLIENT SYSTEM BACKUP: SCRIPT COMPARISON AND HTTPS MIGRATION
+Version: Linux client 0.4.22, 2026-10-11
+
+COMPARISON RESULT
+The existing component/migration script is included in the project. The project
+copy adds portable path arguments and neutral examples. HTTPS already captured
+a complete logical system snapshot, but did not use the package migration
+workflow. The new migration adapter connects these two paths.
+
+FEATURES
+- Homes including hidden files, desktops, fonts and AppImages: HTTPS captures
+  all local users. Migration selects a source and target user separately.
+  A signed-in target user requires additional confirmation; close applications first. Changed target files are retained
+  as recovery copies.
+- Programs/package database: same-platform system recovery restores saved files.
+  Migration installs available applications from the target's repositories.
+  APT and openSUSE/Zypper use the existing migration logic, dry runs, mappings
+  and reports. Not every distribution or package is supported. Do not copy
+  foreign kernels, libraries or desktop base packages blindly.
+- Flatpak, Snap, pip/pipx/npm: files and inventories included; separate installation
+  on the running target. Versions, repositories and architecture must be available
+  and compatible. No automatic confinement or Python system-protection bypass.
+  Missing tools are reported.
+- Users/groups, UID/GID, ACLs/xattrs: included in full snapshots. Migration uses
+  controlled identity reconciliation; review named ACL IDs after user mapping.
+- Services, timers, cron, local programs, printing/Udev/SMB/NFS: included in full
+  snapshots and individually selectable for migration. Foreign system settings
+  may require manual review when changing platforms. Symlinks in selective system
+  payloads are not imported automatically; the full archive and unpacked reference
+  retain them.
+- Mount/automount definitions: included in full snapshots. The original script's
+  special reconstruction remains available for its /SVL hierarchy. Review other
+  mount paths separately as system components; no automatic transfer of foreign
+  root/boot UUIDs. Network share contents are not local system files and are not
+  included through their mounts.
+- Network profiles: explicitly selected NetworkManager files in HTTPS archives.
+  Migration imports only missing regular profiles with mode 0600. Existing profiles
+  remain unchanged; no automatic activation. Unlike the USB script's separate GPG
+  archive, the HTTPS archive has no additional encryption at rest and also contains
+  other system secrets.
+- Additional local volumes: select from a list or enter mount points. Backup output
+  lists included and excluded volumes.
+- Incremental: HTTPS sends only new 4-MiB blocks but rereads the source. No local
+  full-system intermediate archive; no SMB/NFS transport required.
+- Individual files: restore from a system snapshot into a new directory.
+- Server roles/special SQL dumps from the original server menu are not client
+  migration. Stop databases, VMs and containers or use application-aware backup;
+  a live file copy alone is not application-consistent.
+
+USAGE: DIFFERENT DISTRIBUTION
+1. Install the target Linux normally, including its bootloader, and create users.
+2. Open system/component/individual-file restoration in the client. Select Migration,
+   source and target users, and a server snapshot. Select a local Linux work directory (the system disk is allowed if space permits). Its mount point and ancestors must be root-owned and not writable
+   by group or others. The assistant creates a private work directory there.
+3. In a live system, choose the mounted target and migrate its home first. For
+   programs, boot the target, sign in as another administrator and choose target /.
+   Never perform full system-file recovery onto the running system.
+4. Retain the displayed work-directory path. Continue prepared migration without
+   downloading again, for example for programs or additional users. Individual
+   components and package/version checks remain available.
+5. Review and confirm each plan. Inspect work-directory/backup*/reports for missing
+   programs, identity conflicts and omitted settings. Work files contain private
+   system data; remove them explicitly when no longer needed.
+
+SPACE AND LIMITS
+Backup needs no local full archive. Recovery needs a work directory for download and
+an immutable verification copy. Migration additionally needs the unpacked system
+and reserve space; availability is checked before extraction.
+No sector image, automatic partitioning or formatting. Same distribution, version
+and architecture: complete logical restoration to prepared partitions; target
+fstab/crypttab remain. Check bootloader, hardware, filesystem layout and UUIDs
+before reboot. Different hardware or distributions may require manual work; no
+universal identical-boot guarantee. Tests cover archives, paths, adapters and
+cancellation. A complete boot/migration trial on replacement hardware is a separate
+validation step. Existing backups and running jobs remain unchanged.
+
+ANOTHER OWN PC / RUNNING TARGET
+Personal Manager login lists account backups and backups from your own paired PCs.
+New snapshots show the source PC. An agent token alone remains device-bound.
+Old unpaired profiles cannot be attributed to a user without verified assignment.
+Migration can run on the booted target /. A signed-in target user must additionally
+confirm home migration, close applications and sign out afterwards. Conflicting
+files receive recovery copies; nothing is automatically deleted. The target's
+client profile, token, offline configuration and client autostart entries are not
+replaced by the source PC's settings. Local administrator authorization is required.
+No access to another user's backups and no full overwrite of the running OS.
+
+SCOPE ON A RUNNING SYSTEM
+Migration is the default scope on a booted Linux. Select Restore on this running PC.
+Restore homes, native programs, Flatpak/Snap/pip/pipx/npm, desktops and supported
+system components using the full plan or individual steps. Confirmation and
+compatibility checks remain active. Additional backed-up data volumes can be
+restored from the migration menu onto a mounted local Linux volume, with recovery
+copies, no automatic deletion and no nested target mounts. Close applications
+using these data first. A migration work directory on the system disk is permitted
+when there is sufficient space for download, verification copy and unpacked data.
+Private work data then reside in /var/lib/heimserver-manager-client/migrations.
+Full system-file restoration also replaces the package database and system
+libraries and still requires a live system. Boot/partition changes and incompatible
+components require deliberate follow-up work.
+
+Adopt UID and primary GID separately (Linux client)
+--------------------------------------------------
+Sign in with an approved Linux account, then choose Check UID/GID.
+When IDs differ, choose Check adoption.
+The Manager returns only the authenticated server account's UID/GID; emergency
+ADMIN has no corresponding Linux identity. Local username and password remain.
+Preview requires administrator approval; explicitly schedule the change for the
+next reboot. Conversion runs before login. Owners and numeric POSIX ACL entries
+on detected local Linux filesystems are translated, preserving client binding
+and configuration. Network files are not changed. Used target IDs, orphan files
+or ACLs containing target IDs, shared primary groups and read-only Btrfs snapshots
+prevent automatic conversion. All listed local volumes must be available at boot
+with the same UUID and subvolume. Verify a complete backup beforehand.
+The first boot may take considerable time. A failure blocks normal login; the
+private journal and account-file copies reside at
+/var/lib/heimserver-manager-client/user-id-change. Resolve the cause in recovery
+mode and rerun the installed user_ids.py helper with apply. Do not undo started
+changes by merely copying old passwd/group files: file ownership and ACLs must
+match the account database. Jobs not yet started can be cancelled in the client.
+Server IDs, supplementary groups, router configuration and SMB rights are unchanged.
+
+Filesystems with quotas require separate quota migration and are rejected. Encrypted user volumes must be unlocked before conversion. Review numeric IDs in custom service configuration separately.
+
+Client 0.4.23: Check UID/GID compares local and server IDs without administrator approval. Matching IDs require no action; Check adoption is offered only when they differ. Administrator privileges are needed only for the adoption checks and scheduling.
+
+From client 0.4.28, full Linux system backup is the default again, including programs, package sources, desktop and home. Home-only backup is optional. Include additional disks and already mounted NFS/SMB/SSHFS shares only by explicit selection; select further nested mounts separately.

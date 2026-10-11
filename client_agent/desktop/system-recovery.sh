@@ -13,7 +13,7 @@ fi
 [[ $EUID == 0 ]] || { echo 'Mit Administratorfreigabe starten.'; exit 1; }
 source "$base/system-migration.sh"
 # GUI uses explicit prompted reads; pipeline/data reads keep Bash semantics.
-if [[ "${1:-}" == --gui ]]; then
+if [[ "${1:-}" == --gui || "${1:-}" == --https-migration ]]; then
     exec 3>&1 4<&0
     read() {
         local gui_prompt='' gui_arg gui_has_prompt=false
@@ -31,6 +31,54 @@ if [[ "${1:-}" == --gui ]]; then
             builtin read "${gui_args[@]}"
         fi
     }
+fi
+
+# The HTTPS adapter creates this layout in a private root-owned work directory.
+if [[ "${1:-}" == --https-migration ]]; then
+    BACKUP_DIR="$2";AUTO_ROOT_MOUNT="$3";SOURCE_USER="$4"
+    HSM_HTTPS_MIGRATION=true
+    RESTORE_EXCLUDES+=(--exclude=/.config/server-manager-client/ --exclude=/.local/state/heimserver-manager-client/ --exclude=/.config/autostart/heimserver-manager-client.desktop --exclude=/.config/systemd/user/server-manager-client*)
+    LIVE_MODE=false
+    [[ "$AUTO_ROOT_MOUNT" == / ]] || LIVE_MODE=true
+    mapfile -t identity < <(python3 "$base/system_recovery.py" user "$AUTO_ROOT_MOUNT" "$SOURCE_USER")
+    [[ ${#identity[@]} == 3 ]] || die 'Vorhandenen normalen Zielbenutzer wählen.'
+    SOURCE_HOME=${identity[0]};SOURCE_UID=${identity[1]};SOURCE_GID=${identity[2]};SOURCE_GROUP=$SOURCE_GID
+    USB_MOUNTPOINT=$(dirname "$BACKUP_DIR");STORAGE_DIR="$USB_MOUNTPOINT";BACKUP_BASE_DIR="$USB_MOUNTPOINT"
+    # Do not run the legacy cleanup of target APT configuration before approval.
+    TEMP_WORK_DIR="$USB_MOUNTPOINT/.temp";APT_CACHE_DIR="$TEMP_WORK_DIR/apt-cache"
+    RSYNC_PARTIAL_DIR="$TEMP_WORK_DIR/rsync-partial"
+    mkdir -p "$APT_CACHE_DIR/archives/partial" "$RSYNC_PARTIAL_DIR"
+    export TMPDIR="$TEMP_WORK_DIR" PIP_NO_INPUT=1
+    apt-get() { command apt-get -y -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold -o Dir::Cache::archives="$APT_CACHE_DIR/archives" "$@"; }
+    zypper() { command zypper --non-interactive "$@"; }
+    v20_flatpak_cmd() {
+        local scope="$1";shift
+        if [[ "${1:-}" == install ]];then set -- "$@" --noninteractive -y;fi
+        if [[ "$scope" == user ]];then v20_user flatpak "$@" --user
+        else flatpak "$@" --system;fi
+    }
+    # HTTPS snapshots already protect network secrets through transport and private
+    # server storage. Import only missing regular profiles, after explicit consent.
+    v20_network_restore() {
+        v20_confirm 'Gesicherte Netzwerkprofile übernehmen? Enthalten Zugangsdaten; bestehende Profile bleiben erhalten, keine Aktivierung.' || return 0
+        python3 "$base/system_migration.py" --network "$BACKUP_DIR" "$(source_root_for_apps)"
+    }
+    hsm_data_restore() {
+        local source_mount destination
+        read -r -p 'Gesicherter zusätzlicher Mountpunkt (z.B. /data): ' source_mount
+        read -r -p 'Eingehängter lokaler Zieldatenträger: ' destination
+        python3 "$base/system_migration.py" --data "$BACKUP_DIR" "$source_mount" "$destination"
+    }
+    printf '\nHTTPS-Systemmigration: vorhandenes Zielsystem beibehalten. Programme im gestarteten Zielsystem installieren; Home nur bei abgemeldetem Zielbenutzer.\n'
+    result=0
+    if [[ -f "$BACKUP_DIR/personal-component" ]]; then
+        printf '\nPersönliche Sicherung: nur Home und Benutzereinstellungen. Kein gemeinsames System wird verändert.\n'
+        v20_init_report && v20_home && v20_desktop || result=$?
+    else
+        v20_restore_menu_manual || result=$?
+    fi
+    printf '\nMigrationslauf beendet. Bericht und offene Punkte: %s/reports\nArbeitsdaten bleiben für weitere Benutzer/Komponenten erhalten: %s\n' "$BACKUP_DIR" "$USB_MOUNTPOINT"
+    exit "$result"
 fi
 
 # Do not expose the original server/DB/container menus in the client.

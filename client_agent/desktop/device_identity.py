@@ -10,7 +10,17 @@ def identity():
  machine=Path('/etc/machine-id').read_text().strip()
  if len(machine)<16:raise ValueError(tr('Stabile Gerätekennung fehlt (/etc/machine-id).'))
  digest=lambda value:hashlib.sha256(value.encode()).hexdigest()
- return dict(device_id=digest('hsm-device:'+machine),local_user=digest('hsm-user:'+str(os.getuid())))
+ local_user=digest('hsm-user:'+str(os.getuid()))
+ marker=Path('/var/lib/heimserver-manager-client-identities')/str(os.getuid())
+ if marker.exists():
+  import pwd,stat,re
+  for path in (marker,*marker.parents):
+   st=path.lstat()
+   if stat.S_ISLNK(st.st_mode) or st.st_uid!=0 or st.st_mode&0o022:raise ValueError('Unsafe local binding identity')
+  data=json.loads(marker.read_text());p=pwd.getpwuid(os.getuid())
+  if data.get('name')!=p.pw_name or data.get('home')!=p.pw_dir or not re.fullmatch('[a-f0-9]{64}',data.get('local_user','')):raise ValueError('Local binding identity mismatch')
+  local_user=data['local_user']
+ return dict(device_id=digest('hsm-device:'+machine),local_user=local_user)
 def headers():
  i=identity();return {'X-HSM-Device':i['device_id'],'X-HSM-User':i['local_user']}
 def pair():

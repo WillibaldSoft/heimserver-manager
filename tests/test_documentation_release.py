@@ -19,3 +19,22 @@ class DocumentationRelease(unittest.TestCase):
    (root/'docs/en/translation-manifest.json').write_text(json.dumps(docs.mapping(root)))
    (root/'README.md').write_text('changed source')
    with self.assertRaisesRegex(ValueError,'stale'):docs.check(root)
+ def test_reviewed_hashes_do_not_hide_wrong_current_versions(self):
+  from unittest.mock import patch
+  with tempfile.TemporaryDirectory() as tmp:
+   root=Path(tmp);(root/'docs/en').mkdir(parents=True)
+   content={'version.py':'VERSION="0.13-1"',
+    'docs/en/translation-manifest.json':'{}',
+    'CHANGELOG.md':'# CHANGELOG\n\nAktuelle Version: **0.13-1**\n',
+    'docs/en/CHANGELOG.md':'# CHANGELOG\n\nCurrent version: **0.13-1**\n',
+    'docs/Heimserver_Manager_Funktionsuebersicht.txt':'Features\nStand: Version 0.13-1 · Datum\n',
+    'docs/en/Home_Server_Manager_Features.txt':'Features\nStatus: Version 0.13-1\n',
+    'docs/Heimserver_Manager_Versionsaenderungen.txt':'0.13-1 – Datum\n',
+    'docs/en/Home_Server_Manager_Version_History.txt':'0.13-1 – Date\n'}
+   for name,text in content.items():(root/name).write_text(text)
+   with patch.object(docs,'mapping',return_value={}):
+    self.assertEqual(0,docs.check(root))
+    for name in ('CHANGELOG.md','docs/en/CHANGELOG.md','docs/Heimserver_Manager_Funktionsuebersicht.txt','docs/Heimserver_Manager_Versionsaenderungen.txt'):
+     (root/name).write_text(content[name].replace('0.13-1','0.12-64'))
+     with self.assertRaises(ValueError,msg=name):docs.check(root)
+     (root/name).write_text(content[name])

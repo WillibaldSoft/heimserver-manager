@@ -7,9 +7,10 @@ from .install_ui import token,esc
 
 # HSM_NEXTCLOUD_CONTROL_V2: applies only to this Nextcloud gateway.
 CONTROL = Path('/etc/server-manager-nextcloud-wake-control.json')
-def wake_enabled():
+def wake_enabled(service="nextcloud"):
     try:
         config = json.loads(CONTROL.read_text())
+        if 'services' in config:config=config['services'][service]
         mode = config.get('mode')
         if mode in ('active', 'inactive'):return mode == 'active'
         if mode != 'schedule' or type(config.get('default')) is not bool:return False
@@ -26,14 +27,16 @@ def wake_enabled():
 
 
 def load():
-    try:return json.loads(CONTROL.read_text())
+    try:
+        value=json.loads(CONTROL.read_text())
+        return value if isinstance(value,dict) else dict(mode='inactive',default=False,periods=[])
     except FileNotFoundError:return dict(mode='active',default=False,periods=[])
     except (OSError,ValueError):return dict(mode='inactive',default=False,periods=[])
 def revision():
     try:return hashlib.sha256(CONTROL.read_bytes()).hexdigest()
     except FileNotFoundError:return 'missing'
 def supported():
-    try:return 'HSM_NEXTCLOUD_WAKE_CONTROL_V2' in Path('/opt/server-manager-nextcloud-wake/gateway.py').read_text()
+    try:return 'HSM_NEXTCLOUD_WAKE_CONTROL_V3' in Path('/opt/server-manager-nextcloud-wake/gateway.py').read_text()
     except OSError:return False
 
 def parse(form):
@@ -66,16 +69,18 @@ def save(value):
     finally:
         if os.path.exists(tmp):os.unlink(tmp)
 
-def card():
-    body=html("<div class='card'><h3>Nextcloud / DAVx5: Server wecken</h3><p>Nur das Aufwecken durch Nextcloud-/DAVx5-Anfragen steuern. Recovery-API, Home Assistant und Client-Aufweckbefehle bleiben unabhängig. Ein bereits laufender Server bleibt erreichbar; bereits gesendete Aufweckbefehle werden nicht rückgängig gemacht.</p>")
-    if not supported():return body+html('<p>Schalter noch nicht verfügbar: den installierten Nextcloud-Wake-Gateway zuerst aktualisieren.</p></div>')
-    c=load()
-    body+=html('<p>Aufwecken jetzt: <b>')+text('Aktiv' if wake_enabled() else 'Inaktiv')+html('</b> · ')+esc(time.strftime('%H:%M %Z'))+html('</p>')
+def service_card(service,label):
+    body=html("<div class='card'><h3>Server wecken</h3><p>Nur das Aufwecken durch Nextcloud-/DAVx5-Anfragen steuern. Recovery-API, Home Assistant und Client-Aufweckbefehle bleiben unabhängig. Ein bereits laufender Server bleibt erreichbar; bereits gesendete Aufweckbefehle werden nicht rückgängig gemacht.</p>")
+    if not supported() and Path('/opt/server-manager-nextcloud-wake/gateway.py').exists():return body+html('<p>Schalter noch nicht verfügbar: den installierten Nextcloud-Wake-Gateway zuerst aktualisieren.</p></div>')
+    all_config=load();c=all_config.get('services',{}).get(service,all_config)
+    body+='<h4>'+esc(label)+'</h4>'
+    body+=html('<p>Aufwecken jetzt: <b>')+text('Aktiv' if wake_enabled(service) else 'Inaktiv')+html('</b> · ')+esc(time.strftime('%H:%M %Z'))+html('</p>')
     if getattr(g,'auth_principal',{}).get('role')!='admin':return body+html('</div>')
     def select(name,selected,schedule=False):
         opts=[('active','Aktiv'),('inactive','Inaktiv')]+([('schedule','Zeitplan')] if schedule else [])
         return "<select name='"+name+"'>"+''.join("<option value='"+v+"'"+(' selected' if selected==v else '')+">"+text(label)+"</option>" for v,label in opts)+"</select>"
     body+=html("<form method='post' action='/apps/nextcloud/wake/control'>")+token()+"<input type='hidden' name='revision' value='"+revision()+"'>"
+    body+="<input type='hidden' name='service' value='"+service+"'>"
     body+=html('<p><label>Modus: ')+select('mode',c.get('mode'),True)+html('</label></p><details><summary>Tägliche Zeiträume einstellen</summary><p>Bis zu acht Zeiträume täglich, auch über Mitternacht. Es gilt die lokale Uhrzeit dieses Dauerläufers; die Endzeit gehört nicht mehr zum Zeitraum. Überschneidungen sind nicht erlaubt. Der Zeitplan wirkt nur im Modus Zeitplan.</p><p><label>Außerhalb der Zeiträume: ')+select('default','active' if c.get('default') else 'inactive')+html('</label></p><table><thead><tr><th>Von</th><th>Bis</th><th>Aufwecken</th></tr></thead><tbody>')
     periods=c.get('periods',[])
     for i in range(8):
@@ -84,13 +89,33 @@ def card():
         body+="<tr><td><input type='time' name='start"+str(i)+"' value='"+fmt(p.get('start'))+"'></td><td><input type='time' name='end"+str(i)+"' value='"+fmt(p.get('end'))+"'></td><td>"+select('state'+str(i),'active' if p.get('enabled',True) else 'inactive')+"</td></tr>"
     return body+html('</tbody></table></details><p><button>Übernehmen</button></p></form></div>')
 
+def card():
+    body=service_card('nextcloud','Nextcloud / Web')+service_card('davx','DAVx⁵')
+    body+=html("<div class='card'><h3>Weckauslöser und Zähler</h3><p>Seit Beginn der Erfassung, über Neustarts erhalten. Nextcloud / Web umfasst auch nicht erkannte Clients. DAVx⁵ wird anhand seiner Client-Kennung erkannt; manuelle und automatische Synchronisation sind dabei nicht unterscheidbar.</p>")
+    try:
+        data=json.loads(Path('/var/lib/server-manager-nextcloud-wake/statistics.json').read_text())
+        body+='<p>'+esc(data.get('since',''))+'</p><table><tr><th>Client</th>'
+        columns=[('requests','Anfragen'),('poll_deferred','Hintergrundabfragen zurückgestellt'),('blocked','Durch Zeitplan / Schalter verhindert'),('recovery_requested','Weckversuche'),('recovery_failed','Recovery abgelehnt'),('recovery_uncertain','Recovery-Ergebnis unklar')]
+        body+=''.join('<th>'+text(label)+'</th>' for key,label in columns)+html('<th>Letzter Weckversuch</th></tr>')
+        for service,label in [('nextcloud','Nextcloud / Web'),('davx','DAVx⁵')]:
+            row=data.get('services',{}).get(service,{})
+            body+='<tr><td>'+esc(label)+'</td>'+''.join('<td>'+esc(str(row.get(key,0)))+'</td>' for key,label in columns)+'<td>'+esc(row.get('last_recovery_requested','–'))+'</td></tr>'
+        body+='</table>'
+    except (OSError,ValueError,TypeError):body+=html('<p>Noch keine Zähler verfügbar. Gateway aktualisieren; frühere Anfragen werden nicht rückwirkend gezählt.</p>')
+    return body+html('<p>Weckversuche zählen gesendete Recovery-Aufrufe, nicht bestätigte Serverstarts. Zähler können um einige Sekunden verzögert sein.</p></div>')
+
+
 def register(app):
     @app.post('/apps/nextcloud/wake/control')
     def change_wake_control():
         if getattr(g,'auth_principal',{}).get('role')!='admin':abort(403)
         if not secrets.compare_digest(request.form.get('csrf',''),session.get('app_install_csrf','!')):abort(403)
-        if not supported() or request.form.get('revision')!=revision():abort(409)
+        if (not supported() and Path('/opt/server-manager-nextcloud-wake/gateway.py').exists()) or request.form.get('revision')!=revision():abort(409)
         try:config=parse(request.form)
         except ValueError as exc:return esc(text(str(exc))),400
-        save(config)
+        service=request.form.get('service','nextcloud')
+        if service not in ('nextcloud','davx'):abort(400)
+        old=load();services=old.get('services') or {name:old for name in ('nextcloud','davx')}
+        services[service]=config
+        save(dict(version=3,services=services))
         return redirect('/apps/nextcloud/wake',303)

@@ -114,6 +114,8 @@ def run(source,sha,target,cache,scope="all",selection=""):
                 meta=z.getinfo('hsm-backup.json')
                 if meta.file_size>65536:raise ValueError(tr('Metadaten zu groß.'))
                 if json.loads(z.read(meta)).get('scope') not in ('linux-system-tar-v1','linux-system-tar-v2'):raise ValueError(tr('Kein HTTPS-Systemarchiv.'))
+                metadata=json.loads(z.read(meta))
+                if metadata.get('component')=='personal' and scope!='home':raise ValueError(tr('Persönlichen Stand nur als Home, Einzeldateien oder persönliche Migration wiederherstellen.'))
                 platform_check(z,target,scope);members=[]
                 with z.open('files/system.tar') as contents:
                     total,count=inspect(contents,target,scope,selection,members)

@@ -118,9 +118,13 @@ def deactivate():
 
 def action(name):
     if name not in ('wake','need','release','connect','access','status','auto'):raise Error(tr('Unbekannte Aktion.'))
+    import offline
+    if name=='release':offline.pause()
     save(load())
     result=subprocess.run(['/bin/bash',str(LIB/'agent.sh'),name],capture_output=True,text=True,timeout=720)
     if result.returncode:raise Error(tr('Agent-Aktion fehlgeschlagen. Verbindung und Einstellungen prüfen.'))
+    if name in ('need','connect','access'):offline.resume()
+    if name=='release':return tr('Server freigegeben. Offline-Abgleich pausiert; „Server benötigt“ setzt ihn fort. Nicht erreichbare Blocker laufen spätestens nach 120 Sekunden aus.')
     return tr('Aktion beendet. Die Erreichbarkeit wird separat geprüft.')
 
 def status():
@@ -134,14 +138,15 @@ def status():
         state['online']=response.status==200;response.close()
         state['message']=tr('Server erreichbar · Agenten-Anmeldung nicht bestätigt')
         if config.get('TOKEN') and not config['TOKEN'].startswith('setup:'):
-            import device_identity
-            headers=dict(device_identity.headers(),Authorization='Bearer '+config['TOKEN'])
-            req=urllib.request.Request(config['SERVER_URL']+'/api/clients/status',headers=headers)
             try:
+                import device_identity
+                headers=dict(device_identity.headers(),Authorization='Bearer '+config['TOKEN'])
+                req=urllib.request.Request(config['SERVER_URL']+'/api/clients/status',headers=headers)
                 with urllib.request.build_opener(NoRedirect).open(req,timeout=4) as r:
                     state['connected']=r.status==200 and json.load(r).get('ok') is True
                 if state['connected']:state['message']=tr('Verbunden · Agenten-Anmeldung bestätigt')
-            except Exception:pass
+            except PermissionError:state['message']=tr('Server erreichbar · Lokale Client-Kennung nicht lesbar')
+            except Exception:state['message']=tr('Server erreichbar · Agenten-Anmeldung nicht bestätigt')
     except Exception:state['message']=tr('Server nicht erreichbar')
     try:state['service']=systemctl('is-active','server-manager-client-heartbeat.timer',check=False)=='active'
     except Exception:pass

@@ -1,5 +1,16 @@
 HEIMSERVER MANAGER – FUNKTIONEN IM ÜBERBLICK
-Stand: Version 0.12-67 · 10. Oktober 2026
+Stand: Version 0.13-1 · 11. Oktober 2026
+
+NEU UND GEÄNDERT IN VERSION 0.13-1 – 11. Oktober 2026 – Beta
+- Neue Beta-Reihe für gemeinsame PC-Systemstände und getrennte persönliche Sicherungen. Vorhandene Systemstände wiederverwenden; Aktualisierung nach Systemänderungen ausdrücklich wählen. Zusätzliche Datenplatten und Freigaben bleiben opt-in.
+- Administratoren können Systemsicherung und Systemwiederherstellung pro Benutzer ausdrücklich freigeben. Gemeinsame Stände enthalten sensible Systemdateien; fremde persönliche Sicherungen bleiben getrennt.
+- Sicherungen gezielt abbrechen; abgeschlossene Stände erhalten. Kurze Sicherungs-API-Anfragen geben ihren Schlafblocker nach Verarbeitung frei; Archivdownloads halten ihn bis zum Schließen.
+- Linux-Client 0.4.31: englische Abbruchmeldung und Hinweise auf delegierte Systemrechte vervollständigt. Windows-Client unverändert.
+- Versionsangaben in CHANGELOG, Funktionsübersicht und Historie in Deutsch/Englisch vereinheitlicht; Releaseprüfung erkennt künftig widersprüchliche aktuelle Versionsangaben.
+- SQLite-Sicherungen schließen Datenbankverbindungen auch bei Fehlern; Sonderzeichen in Sicherungsquellpfaden werden korrekt behandelt.
+- Gesamttests vereinheitlicht und fehlende Testabhängigkeiten in der Release-Dateiliste ergänzt.
+- Grenzen: Beta; Hardware-, Netzwerk- und reale Wiederherstellungsszenarien werden durch automatisierte Tests nicht vollständig abgedeckt. Alte kombinierte Sicherungen werden nicht automatisch zu gemeinsamen Ständen umgewandelt.
+
 
 Der Heimserver Manager bündelt die Verwaltung eines privaten Linux-Servers
 in einer Weboberfläche. Er ist für Desktop und Smartphone ausgelegt.
@@ -945,3 +956,39 @@ Nextcloud-Wake-Korrektur (10.10.2026): Erkannte reine Nextcloud-Desktop-Hintergr
 
 NEU UND GEÄNDERT IN VERSION 0.12-67
 Offline-Dateien und Mount-Übernahme, Linux-Client 0.4.17, Windows-Client 0.2.11; Nextcloud-Hintergrundabfragen ohne dauerhaften Schlafblocker. Details und Grenzen siehe Versionshistorie. Beta-Stand.
+
+Unveröffentlichte Korrektur 11.10.2026: Offline-Schlafblocker tragen den aktuellen Clientnamen. Sie gelten nur für online gemeldete, aktivierte Clients mit erneuerter Sync-Meldung (höchstens 120 Sekunden ohne Erneuerung). Offene oder verwaiste HTTP-Anfragen blockieren nicht unbegrenzt. Ausstehende Dateien allein halten den Server nicht wach. Der nächste manuelle oder konfigurierte automatische Abgleich verwendet den bestätigten Fortschritt; keine Synchronisation eines ausgeschalteten Clients.
+
+Linux-Client 0.4.18 (11.10.2026): Offline-Abgleich zeigt je Ordner Prozent, übertragene MiB, aktuelle Datei und eine geschätzte Restzeit. Bestands- und Prüfsummenprüfung werden vorher separat angezeigt. 100 % erst nach erfolgreichem Abschluss; Konflikte bleiben sichtbar. Die Restzeit ist eine Schätzung, keine Abschlussgarantie. Windows unverändert.
+
+Linux-Client 0.4.19 (11.10.2026): „Server freigeben“ pausiert Offline-Abgleiche dieses Clients einschließlich Intervall- und Ausschalt-Abgleich und gibt dessen Offline-Schlafblocker frei. Laufende Übertragungen stoppen an der nächsten Prüfgrenze; lokale Änderungen und bestätigte Dateistände bleiben erhalten. Bei fehlender Verbindung verfällt der Blocker nach spätestens 120 Sekunden. „Server benötigt“, „Wecken und verbinden“ oder „Zugriff vorbereiten“ erlauben den Abgleich wieder. Andere Clients bleiben unverändert. Windows unverändert.
+
+Linux-Client 0.4.20 (11.10.2026): Manuelles „Server freigeben“ bleibt trotz Heartbeat und Betriebsmodus „Mit Server starten“ bestehen. Erst ein neuer Client-Start, „Server benötigt“/„Wecken und verbinden“/„Zugriff vorbereiten“ oder eine gespeicherte Änderung des Betriebsmodus hebt die Freigabe auf. Der konfigurierte Startmodus bleibt erhalten; Offline-Abgleiche bleiben während der Freigabe pausiert.
+
+Linux-Client 0.4.21 (11.10.2026): Statussymbol-Menü „Offline-Dateien“ erscheint nur bei eingerichteten Ordnern. „Jetzt synchronisieren“ gleicht alle eingerichteten Ordner ab, ohne den Zeitplan zu ändern. Die gespeicherten Vorgaben „Alle 10 Minuten“, „Nach Client-Start“ und „Nur manuell“ gelten für alle Ordner und deaktivieren den Ausschalt-Abgleich. Individuelle Einstellungen bleiben im Offline-Fenster möglich. Manuelle Serverfreigabe wird nicht aufgehoben. Windows unverändert.
+
+Unveröffentlicht (11.10.2026): Nextcloud / Web und DAVx⁵ erhalten getrennte Aktiv/Inaktiv-Schalter und tägliche Zeitpläne mit bis zu acht Zeiträumen pro Dienst. Bestehende gemeinsame Regeln werden für beide übernommen. Gateway 1.2 zählt Anfragen, zurückgestellte Hintergrundprüfungen, durch Regeln abgewiesene Weckanfragen und Recovery-Aufrufe getrennt; Zähler bleiben bei regulären Neustarts erhalten. Kein rückwirkender Verlauf, keine IP-Adressen oder Zugangsdaten in Zählern. DAVx⁵-Erkennung anhand Client-Kennung; manuell/automatisch nicht unterscheidbar. Bei laufendem Server bleiben Zugriff und Übertragungsschutz auch außerhalb der Weckzeiten erhalten.
+
+Linux-Client 0.4.22 (11.10.2026): HTTPS-Systemarchive an den vorhandenen Migrationsassistenten angebunden. Quell-/Zielbenutzer, APT/openSUSE-Paketmigration, Zusatzsoftware und Systemkomponenten auswählbar; vorbereitete Migration nach Zielsystemstart ohne erneuten Download fortsetzen. Lokale Zusatzdatenträger per Auswahl, Offline-Debian-Paketinventar ohne Ausführen des Quellsystems. Keine automatische Partitionierung oder universelle distributionsübergreifende 1:1-Zusage; Arbeitsplatte und Prüfung der Komponentenberichte erforderlich. Windows unverändert.
+
+Ergänzung 0.4.22: Eigene gekoppelte PC-Sicherungen nach Manager-Anmeldung geräteübergreifend lesen; neue Stände mit Quell-PC. Migration auf laufendem Ziel möglich; Home bei angemeldetem Benutzer nur nach zusätzlicher Bestätigung. Ziel-Clientprofil und Autostart bleiben geschützt, fremde Benutzer und reine Agenten-Tokens bleiben getrennt.
+
+Linux-Client: Server-UID und primäre GID separat mit Vorschau und Administratorfreigabe beim Neustart übernehmen; Dateieigentümer/ACLs und Client-Kopplung berücksichtigen. Konflikte verhindern die automatische Umstellung.
+
+Client 0.4.23: UID/GID zunächst ohne Administratorrechte vergleichen; Übernahme nur bei abweichenden IDs anbieten.
+
+Client 0.4.24: Lesbarer separater Speicherort für die lokale UID/GID-Kennung; Fehler der Client-Kennung nicht als Serverausfall melden.
+
+Client 0.4.25: Anmeldung, Profil, HTTPS, Gerätekopplung, UID/GID und Agent-Einrichtung unter „Anmeldung & Einrichtung“ zusammengefasst. Alltagsschaltflächen bleiben direkt zugänglich.
+
+Client 0.4.26: „UID/GID verwalten“ bündelt Prüfung und Abbrechen. Manager-Anmeldung direkt erreichbar; nach Anmeldung geht es zur UID/GID-Prüfung weiter.
+
+Client 0.4.27: Standardmäßig eigenes Home sichern. Verschachtelte Mounts einschließlich Bind-Mounts und eingehängter Dateien ausschließen. Vollständiges Linux-System nur nach ausdrücklicher Auswahl.
+
+Client 0.4.28: Vollständige Linux-Systemsicherung wieder Standard, einschließlich Programme, Paketquellen, Desktop und Home. Zusätzliche Datenplatten und eingehängte NFS/SMB/SSHFS-Freigaben nur ausdrücklich auswählen; verschachtelte weitere Mounts bleiben ausgeschlossen.
+
+Linux-Client 0.4.29 (11.10.2026): Gemeinsamer Systemstand pro stabiler PC-Kennung, getrennte persönliche Home-Sicherungen pro Konto/Client. Vor dem HTTPS-Lauf wird geprüft, ob ein abgeschlossener gemeinsamer Stand existiert. Dieser wird wiederverwendet; persönliche Daten werden erneut gelesen, nur neue/geänderte 4-MiB-Blöcke übertragen. Jeder persönliche Stand bleibt vollständig abrufbar. Der gemeinsame Stand enthält keine normalen Benutzer-Homes und ist nur mit Manager-Administratoranmeldung anlegbar, aktualisierbar und abrufbar. Nach System-/Programmänderungen ausdrücklich neu sichern. Jeder Benutzer muss sein eigenes Home sichern; fehlende Benutzersicherungen werden nicht ungefragt aus fremden Konten erzeugt. Zusätzliche Platten/Freigaben nur nach Auswahl beim neuen Systemstand. Persönliches Home unter /home erforderlich; Netzwerk-Homes nicht automatisch sichern. Rücksicherung: System zuerst als Administrator, danach persönliche Stände getrennt; persönliche Migration verändert keine Systemkomponenten. Alte kombinierte Sicherungen bleiben privat im bisherigen Konto/Profil und werden nicht automatisch geteilt. Offline-Quellen weiter über USB-Assistent. Windows unverändert.
+
+Linux-Client 0.4.30 (11.10.2026): „Sicherung abbrechen“ während HTTPS-System-/Home-/Ordnersicherungen und lokalen ZIP-Dateisicherungen. Der laufende Abschnitt kann noch eine Antwort benötigen. Inventar-/Archivhelfer erhalten ein Abbruchsignal; nur die konkrete unvollständige Auftragskennung wird verworfen. Bereits abgeschlossene Stände und gemeinsam verwendete Blöcke bleiben erhalten. Bei bereits bestätigtem Abschluss wird der Stand beibehalten; bei nicht erreichbarem Server wird ausstehendes Aufräumen gemeldet. Zusätzlich Manager-Administratoraktion für laufende/unvollständige Desktop-Übertragungen unter Backup & Recovery → Desktop-Client-Sicherungen. Der separate interaktive USB/NFS-Systemassistent und Rücksicherungen erhalten keinen pauschalen Zwangsabbruch. Ein bereits laufender älterer Client erhält den neuen Button erst nach Aktualisierung und Neustart.
+
+Benutzerfreigabe für PC-Systemstände (11.10.2026): Unter Einstellungen → Manager-Benutzer kann der Administrator „PC-Systemsicherung und Systemwiederherstellung erlauben“ aktivieren. Erfordert Rolle Benutzer und Eigene Clients & Sicherungen. Die Freigabe erlaubt Zugriff auf alle gemeinsamen PC-Systemstände einschließlich sensibler Systemdateien. Persönliche Sicherungen anderer Benutzer und Server-Sicherungsaufträge bleiben gesperrt. Standard aus; Änderungen beenden vorhandene Kontositzungen. Agenten-Tokens erhalten diese Rechte nicht.

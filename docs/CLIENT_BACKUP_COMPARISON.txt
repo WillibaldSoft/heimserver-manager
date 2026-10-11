@@ -1,0 +1,140 @@
+Linux-Client 0.4.29 (11.10.2026): Gemeinsamer Systemstand pro stabiler PC-Kennung, getrennte persönliche Home-Sicherungen pro Konto/Client. Vor dem HTTPS-Lauf wird geprüft, ob ein abgeschlossener gemeinsamer Stand existiert. Dieser wird wiederverwendet; persönliche Daten werden erneut gelesen, nur neue/geänderte 4-MiB-Blöcke übertragen. Jeder persönliche Stand bleibt vollständig abrufbar. Der gemeinsame Stand enthält keine normalen Benutzer-Homes und ist nur mit Manager-Administratoranmeldung anlegbar, aktualisierbar und abrufbar. Nach System-/Programmänderungen ausdrücklich neu sichern. Jeder Benutzer muss sein eigenes Home sichern; fehlende Benutzersicherungen werden nicht ungefragt aus fremden Konten erzeugt. Zusätzliche Platten/Freigaben nur nach Auswahl beim neuen Systemstand. Persönliches Home unter /home erforderlich; Netzwerk-Homes nicht automatisch sichern. Rücksicherung: System zuerst als Administrator, danach persönliche Stände getrennt; persönliche Migration verändert keine Systemkomponenten. Alte kombinierte Sicherungen bleiben privat im bisherigen Konto/Profil und werden nicht automatisch geteilt. Offline-Quellen weiter über USB-Assistent. Windows unverändert.
+
+CLIENT-SYSTEMSICHERUNG: SKRIPTVERGLEICH UND HTTPS-MIGRATION
+Stand: Linux-Client 0.4.22, 11.10.2026
+
+ERGEBNIS DES VERGLEICHS
+Das vorhandene Komponenten-/Migrationsskript ist im Projekt enthalten. Gegenüber
+seiner ursprünglichen Fassung enthält die Projektfassung zusätzliche portable
+Pfadparameter und neutrale Beispiele. Der HTTPS-Weg sicherte bereits einen
+vollständigen logischen Systemstand, nutzte aber die Paketmigration nicht.
+Die neue Verbindung zum Migrationsassistenten schließt diese Lücke.
+
+FUNKTIONEN
+- Home einschließlich versteckter Dateien, Desktop, Fonts und AppImages:
+  Im HTTPS-Systemarchiv alle lokalen Benutzer; Migration gezielt je Benutzer.
+  Quell- und Zielbenutzer separat wählen. Bei angemeldetem Zielbenutzer ist eine zusätzliche
+  Bestätigung erforderlich; Programme vorher schließen. Abweichende Zieldateien bleiben als Rückkopie.
+- Programme/Paketdatenbank: gleicher Systemstand wird als Dateien restauriert.
+  Migration installiert verfügbare Anwendungen aus den Quellen des Zielsystems.
+  APT und openSUSE/Zypper verwenden die vorhandene Migrationslogik mit Probelauf,
+  Paketzuordnung und Berichten. Nicht jede Distribution/jedes Paket ist unterstützt.
+  Fremde Kernel, Bibliotheken und Desktop-Basispakete nicht blind übernehmen.
+- Flatpak, Snap, pip/pipx/npm: Dateien und Inventare enthalten; gesonderte
+  Neuinstallation im gestarteten Zielsystem. Versionen, Quellen und Architektur
+  müssen verfügbar/kompatibel sein. Kein automatisches Aufweichen von
+  Confinement oder Python-Systemschutz. Fehlende Werkzeuge werden gemeldet.
+- Benutzer/Gruppen, UID/GID, ACLs/xattrs: im Vollstand enthalten. Migration mit
+  kontrolliertem Identitätsabgleich; fremde ACL-IDs nach Benutzerumsetzung prüfen.
+- Dienste, Timer, Cron, lokale Programme, Drucker/Udev/SMB/NFS: im Vollstand
+  enthalten, im Migrationsmenü gezielt auswählbar. Fremde Systemkonfigurationen
+  bleiben bei Plattformwechsel teilweise zur manuellen Prüfung zurück.
+  Symlinks in selektiven System-Payloads werden nicht automatisch übernommen;
+  sie bleiben im vollständigen Archiv und in der entpackten Referenz erhalten.
+- Mount-/Automountdefinitionen: im Vollstand enthalten. Der spezielle
+  Mountrekonstruktor des Ursprungsskripts bleibt für dessen /SVL-Struktur
+  nutzbar. Andere Mountpfade als Systemkomponenten gesondert prüfen; kein
+  automatisches Übertragen fremder Root-/Boot-UUIDs. Netzwerkdaten selbst sind
+  keine lokalen Systemdateien und werden nicht über Mounts mitgesichert.
+- Netzwerkprofile: ausdrücklich wählbare NetworkManager-Dateien im HTTPS-Archiv;
+  Migrationsimport ergänzt nur fehlende reguläre Profile mit Modus 0600.
+  Vorhandene Profile bleiben erhalten, keine automatische Aktivierung.
+  Anders als das separate GPG-Teilarchiv des USB-Skripts ist das HTTPS-Archiv
+  auf dem Server nicht zusätzlich verschlüsselt. Es enthält weitere Secrets.
+- Zusätzliche lokale Datenträger: per Auswahl oder Mountpunkt-Eingabe einschließen.
+  Enthaltene/ausgeschlossene Datenträger erscheinen im Sicherungsprotokoll.
+- Inkrementell: HTTPS überträgt nur neue 4-MiB-Blöcke, liest die Quelle aber erneut.
+  Kein lokales System-Zwischenarchiv, kein SMB/NFS für die Serverübertragung.
+- Einzeldateien: weiterhin aus einem Systemstand in einen neuen Ordner holen.
+- Serverrollen/SQL-Spezialdumps des ursprünglichen Servermenüs sind keine
+  Client-Migration. Laufende Datenbanken, VMs und Container vor Systemsicherung
+  stoppen oder anwendungsspezifisch sichern; Dateikopie allein ist nicht konsistent.
+
+BEDIENUNG: ANDERE DISTRIBUTION
+1. Ziel-Linux regulär installieren (einschließlich Bootloader) und Benutzer anlegen.
+2. Im Client Systemstand / Komponenten / einzelne Dateien wiederherstellen öffnen.
+   Umfang Migration wählen, Quell- und Zielbenutzer sowie Server-Sicherungsstand
+   angeben. Eine lokale Linux-Arbeitsablage wählen (Systemplatte bei genügend Platz möglich). Deren Mountpunkt
+   und übergeordnete Ordner müssen root gehören und dürfen nicht gruppen-/weltweit
+   beschreibbar sein. Der Assistent legt dort eine private Arbeitsablage an.
+3. Im Live-System eingehängtes Ziel-Linux wählen. Home zuerst übernehmen.
+   Für Programme anschließend das Zielsystem starten, als anderer Administrator
+   anmelden und Ziel / wählen. Im laufenden Quell-/Zielsystem keine vollständige
+   Systemdateirücksicherung ausführen.
+4. Angezeigtes Arbeitsverzeichnis aufbewahren. Mit Vorbereitete Migration
+   fortsetzen ohne Download erneut öffnen, beispielsweise für Programme oder
+   weitere Benutzer. Auch Komponenten und Paket-/Versionsprüfung sind auswählbar.
+5. Jeden Plan prüfen und bestätigen. Berichte im Arbeitsverzeichnis/backup*/reports
+   auf fehlende Programme, Identitätskonflikte und ausgelassene Konfiguration prüfen.
+   Arbeitsdaten enthalten private Systemdaten; nach Prüfung gezielt entfernen.
+
+PLATZ UND GRENZEN
+Sicherung benötigt kein lokales Vollarchiv. Rücksicherung benötigt dagegen eine
+Arbeitsablage: Download plus geschützte Prüfkopie; Migration zusätzlich das
+entpackte System und Reserve. Die Belegung wird vor der Extraktion geprüft.
+Kein sektorgenaues Abbild, keine automatische Partitionierung/Formatierung.
+Gleiche Distribution/Version/Architektur: vollständige logische Rücksicherung
+auf vorbereitete Partitionen; Ziel-fstab/crypttab bleiben erhalten. Bootloader,
+Hardware, Dateisystemaufteilung und UUIDs vor Neustart prüfen. Ein anderer PC
+oder eine andere Distribution kann Nacharbeit erfordern; kein universelles
+1:1-Bootversprechen. Tests prüfen Archiv, Pfade, Adapter und Abbruchabläufe;
+ein vollständiger Boot-/Migrationsversuch auf realer Ersatzhardware ist separat
+nötig. Bestehende Sicherungen und laufende Aufträge werden nicht verändert.
+
+ANDERER EIGENER PC / LAUFENDES ZIELSYSTEM
+Mit persönlicher Manager-Anmeldung sind Kontosicherungen und Sicherungen eigener
+gekoppelter PCs gemeinsam auswählbar. Quell-PC wird bei neuen Ständen angezeigt.
+Ein Agenten-Token allein bleibt gerätegebunden. Alte ungekoppelte Profile können
+nicht ohne geprüfte Zuordnung einem Benutzer zugeschrieben werden.
+Migration kann auf dem gestarteten Ziel / laufen. Ein angemeldeter Zielbenutzer
+muss den Home-Abgleich zusätzlich bestätigen und Programme schließen; anschließend
+abmelden. Konfliktkopien werden angelegt, nichts automatisch gelöscht. Das aktuelle
+Client-Profil, Token, Offline-Konfiguration und die Client-Autostarteinträge werden
+nicht durch die des Quell-PCs ersetzt. Auch Benutzer anderer PCs müssen sich lokal
+als Administrator autorisieren. Keine Freigabe für Sicherungen fremder Benutzer;
+kein vollständiges Überschreiben des laufenden Betriebssystems.
+
+UMFANG IM LAUFENDEN SYSTEM
+Migration ist auf einem gestarteten Linux der voreingestellte Umfang; Ziel
+Auf diesem laufenden PC wiederherstellen wählen. Home, native Programme,
+Flatpak/Snap/pip/pipx/npm, Desktop und die unterstützten Systemkomponenten
+können über den vollständigen Plan oder einzeln übernommen werden. Bestätigungen
+und Kompatibilitätsprüfungen bleiben aktiv. Auch zusätzliche gesicherte
+Datenlaufwerke sind im Migrationsmenü auf einen eingehängten lokalen Datenträger
+rücksicherbar: kein automatisches Löschen, Rückkopien, keine verschachtelten
+Zielmounts. Anwendungen mit Zugriff auf die Daten vorher schließen.
+Die Arbeitsablage darf beim laufenden Migrationsziel auf der Systemplatte liegen,
+wenn ausreichend Platz für Download, Prüfkopie und entpackten Stand frei ist.
+Private Arbeitsdaten liegen dann unter /var/lib/heimserver-manager-client/migrations.
+Vollständige Systemdateirücksicherung ersetzt dagegen auch Paketdatenbank und
+Systembibliotheken und bleibt vom Live-System auszuführen. Boot-/Partitions-
+Umbau und nicht kompatible Komponenten benötigen gezielte Nacharbeit.
+
+UID und primäre GID unabhängig übernehmen (Linux-Client)
+------------------------------------------------------
+Nach Anmeldung mit einem freigegebenen Linux-Konto: „UID/GID überprüfen“.
+Bei Abweichung lässt sich „Übernahme prüfen …“ auswählen.
+Der Manager liefert ausschließlich UID/GID des angemeldeten Serverkontos; ADMIN
+hat keine entsprechende Linux-Identität. Lokaler Benutzername und Passwort bleiben.
+Vorschau mit Administratorfreigabe, danach ausdrücklich für den nächsten Neustart
+vormerken. Die Umstellung läuft vor der Anmeldung. Eigentümer auf den erkannten
+lokalen Linux-Dateisystemen und numerische POSIX-ACLs werden angepasst; bestehende
+Client-Kopplung und Konfiguration bleiben erhalten. Netzwerkdateien nicht ändern.
+Belegte Ziel-IDs, verwaiste Dateien/ACLs mit den Ziel-IDs, gemeinsam genutzte
+primäre Gruppen und schreibgeschützte Btrfs-Snapshots verhindern die Automatik.
+Alle aufgelisteten lokalen Datenträger müssen beim Neustart mit derselben UUID
+und demselben Untervolume bereitstehen. Vorher vollständige Sicherung prüfen.
+Der erste Start kann lange dauern. Bei Fehlern bleibt die normale Anmeldung
+blockiert; geschütztes Journal und Kontodateien liegen unter
+/var/lib/heimserver-manager-client/user-id-change. Im Rettungsmodus Ursache
+beheben und den installierten Helfer user_ids.py mit „apply“ erneut ausführen.
+Begonnene Änderungen nicht durch bloßes Kopieren alter passwd/group zurücknehmen:
+Dateieigentümer und ACLs müssen zur Kontodatenbank passen. Noch nicht gestartete
+Aufträge lassen sich im Client mit „UID/GID-Umstellung abbrechen“ entfernen.
+Die Umstellung verändert keine Server-IDs, Zusatzgruppen, Router- oder SMB-Rechte.
+
+Dateisysteme mit Quoten benötigen eine gesonderte Quotenmigration und werden abgelehnt. Verschlüsselte Benutzerablagen müssen vor der Umstellung entsperrt sein. Numerische IDs in eigenen Dienstkonfigurationen sind separat zu prüfen.
+
+Client 0.4.23: „UID/GID überprüfen“ vergleicht lokale und Server-IDs ohne Administratorfreigabe. Bei Übereinstimmung ist nichts zu tun; nur bei Abweichung wird „Übernahme prüfen …“ angeboten. Erst die Übernahmeprüfung und Vormerkung benötigen Administratorrechte.
+
+Ab Client 0.4.28 ist die vollständige Linux-Systemsicherung wieder Standard: Programme, Paketquellen, Desktop und Home bleiben enthalten. Home allein ist optional. Zusätzliche Datenplatten und bereits eingehängte NFS/SMB/SSHFS-Freigaben nur nach ausdrücklicher Auswahl aufnehmen; weitere verschachtelte Mounts separat auswählen.

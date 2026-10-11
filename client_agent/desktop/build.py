@@ -1,7 +1,7 @@
 """Build a generic desktop client, deriving shell logic from the current installer."""
 import ast,shlex,shutil,subprocess,tempfile
 from pathlib import Path
-VERSION='0.4.17'
+VERSION='0.4.31'
 
 def legacy_parts(source):
     tree=ast.parse(source.read_text())
@@ -18,6 +18,9 @@ def legacy_parts(source):
     units={n:section('cat > "$SYSDIR/'+n+'" ') for n in ['server-manager-client.service','server-manager-client-heartbeat.service','server-manager-client-heartbeat.timer']}
     units={n:s.replace('%h/.local/bin/server-manager-client-heartbeat','/usr/lib/heimserver-manager-client/heartbeat.sh').replace('%h/.local/bin/server-manager-client','/usr/lib/heimserver-manager-client/agent.sh') for n,s in units.items()}
     heartbeat=section('cat > "$APPDIR/server-manager-client-heartbeat" ')
+    # Manual release survives all heartbeats until a real client start.
+    heartbeat=heartbeat.replace('curl -fsS', 'if [[ -f "$HOME/.config/server-manager-client/offline/paused" ]]; then required=false; reason="manual_release"; fi\ncurl -fsS',1)
+    main=main.replace('auto_start(){', 'auto_start(){\n  rm -f "$HOME/.config/server-manager-client/offline/paused"')
     def bind(text):
         identity='X-HSM-Device: $(/usr/bin/python3 /usr/lib/heimserver-manager-client/device_identity.py device)'
         user='X-HSM-User: $(/usr/bin/python3 /usr/lib/heimserver-manager-client/device_identity.py user)'
@@ -39,6 +42,10 @@ def recovery_archive(root):
         'ANLEITUNG.txt': ((root/'docs/CLIENT_SYSTEM_RECOVERY.txt').read_bytes(), 0o644),
         'LICENSE': ((root/'LICENSE').read_bytes(), 0o644),
     }
+    for name in ('system_migration.py','system_restore.py','system_components.py','system_stream.py'):
+        files[name]=((root/'client_agent/desktop'/name).read_bytes(),0o644)
+    files['HTTPS_MIGRATION.txt']=((root/'docs/CLIENT_BACKUP_COMPARISON.txt').read_bytes(),0o644)
+    files['HTTPS_MIGRATION_EN.txt']=((root/'docs/en/CLIENT_BACKUP_COMPARISON.txt').read_bytes(),0o644)
     output = io.BytesIO()
     with zipfile.ZipFile(output, 'w', compression=zipfile.ZIP_DEFLATED) as archive:
         for name, (data, mode) in files.items():
@@ -62,7 +69,7 @@ def build(root,output):
         write('usr/lib/heimserver-manager-client/system-migration.sh',migration,0o755)
         write('usr/lib/heimserver-manager-client/system-recovery.sh',(root/'client_agent/desktop/system-recovery.sh').read_text(),0o755)
         write('usr/lib/heimserver-manager-client/system_recovery.py',(root/'client_agent/desktop/system_recovery.py').read_text())
-        for name in ['offline_smb.py','offline_lifecycle.py','offline_systemd.py','offline_mount_admin.py','offline_mounts.py','offline.py','offline_ui.py','client_i18n.py','client_en.json','device_identity.py','incremental.py','system_components.py','system_files.py','core.py','gui.py','backup.py','connection.py','extras_ui.py','https_admin.py','system_recovery_ui.py','system_stream.py','system_https.py','system_restore.py','system_restore_ui.py','system_recovery.py']:
+        for name in ['user_ids.py','user_ids_ui.py','offline_smb.py','offline_lifecycle.py','offline_systemd.py','offline_mount_admin.py','offline_mounts.py','offline.py','offline_ui.py','client_i18n.py','client_en.json','device_identity.py','incremental.py','system_migration.py','system_components.py','system_files.py','core.py','gui.py','backup.py','connection.py','extras_ui.py','https_admin.py','system_recovery_ui.py','system_stream.py','system_https.py','system_restore.py','system_restore_ui.py','system_recovery.py']:
             write('usr/lib/heimserver-manager-client/'+name,(root/'client_agent/desktop'/name).read_text())
         for name in ('offline','connecting','online'):
             target=stage/'usr/lib/heimserver-manager-client/icons'/(name+'.png');target.parent.mkdir(parents=True,exist_ok=True)
@@ -76,10 +83,13 @@ def build(root,output):
         autostart=entry.replace('Exec=heimserver-manager-client','Exec=heimserver-manager-client --background --autostart')+'TryExec=heimserver-manager-client\n'
         write('usr/lib/heimserver-manager-client/autostart.desktop',autostart)
         write('etc/xdg/autostart/heimserver-manager-client.desktop',autostart)
+        write('usr/share/doc/heimserver-manager-client/HTTPS_MIGRATION.txt',(root/'docs/CLIENT_BACKUP_COMPARISON.txt').read_text())
+        write('usr/share/doc/heimserver-manager-client/HTTPS_MIGRATION_EN.txt',(root/'docs/en/CLIENT_BACKUP_COMPARISON.txt').read_text())
         write('usr/share/doc/heimserver-manager-client/HTTPS_SYSTEM_BACKUP.txt',(root/'docs/HTTPS_SYSTEM_BACKUP.txt').read_text())
         write('usr/share/doc/heimserver-manager-client/SYSTEM_RECOVERY.txt',(root/'docs/CLIENT_SYSTEM_RECOVERY.txt').read_text())
         write('usr/share/doc/heimserver-manager-client/README.txt',(root/'client_agent/desktop/README.txt').read_text())
         write('usr/share/doc/heimserver-manager-client/copyright',(root/'LICENSE').read_text())
+        write('DEBIAN/prerm', '#!/bin/sh\nset -e\nif [ "$1" = remove ] && [ -e /var/lib/heimserver-manager-client/user-id-change/plan.json ]; then\n /usr/bin/python3 -c \'import json; p=json.load(open("/var/lib/heimserver-manager-client/user-id-change/plan.json")); assert p["phase"] in ("complete","cancelled"), "Resolve or cancel pending UID/GID conversion before removal"\'\nfi\n',0o755)
         write('DEBIAN/control',f'Package: heimserver-manager-client\nVersion: {VERSION}\nSection: net\nPriority: optional\nArchitecture: all\nMaintainer: Heimserver Manager project\nDepends: python3 (>= 3.10), python3-gi, gir1.2-gtk-3.0, gir1.2-ayatanaappindicator3-0.1, curl, bash, systemd, wakeonlan, openssl, ca-certificates, pkexec, python3-smbc, libsecret-tools, rsync, acl, gnupg, xterm\nDescription: Desktop client for Heimserver Manager\n User-session agent, GTK settings and notification-area indicator.\n')
         # Do not inherit the build host's umask (or TemporaryDirectory's 0700).
         # All package directories must be traversable by desktop users.

@@ -11,8 +11,28 @@ LEASES={}
 ACTIVE=set()
 CONFIG=lambda:server_settings.CONFIG_DIR/'offline-files.json'
 def grants():return server_settings.read(CONFIG()).get('folders',[])
+CLIENT_DB=None
 def blockers():
-    return [dict(source='Offline-Dateien',type='offline-sync',title='Offline-Dateien werden synchronisiert',reason='Befristete Übertragung',priority=95,url='/clients/offline') ] if ACTIVE or any(v>time.monotonic() for v in list(LEASES.values())) else []
+    now=time.monotonic()
+    for key,value in list(LEASES.items()):
+        if value['until']<=now:LEASES.pop(key,None)
+    if not LEASES:return []
+    online=None
+    if CLIENT_DB is not None:
+        con=CLIENT_DB()
+        try:
+            online={int(r['id']):r['name'] or r['hostname'] or 'Client' for r in con.execute("SELECT id,name,hostname FROM client_agents WHERE enabled=1 AND is_online=1 AND last_seen>=datetime('now','localtime','-180 seconds')")}
+        finally:con.close()
+    result={}
+    for key,value in list(LEASES.items()):
+        cid=int(key[0])
+        if online is not None and cid not in online:
+            LEASES.pop(key,None);continue
+        name=online[cid] if online is not None else value['name']
+        result[cid]=dict(source='Offline-Dateien',type='offline-sync',title=name,
+                        reason='Offline-Dateien: laufender Abgleich dieses Clients',
+                        priority=95,url='/clients',client_id=cid)
+    return list(result.values())
 def parts(value):
     if not isinstance(value,str) or len(value)>700:raise ValueError('Invalid path')
     p=value.split('/')
@@ -192,6 +212,8 @@ def grants_revision(rows):
     return hashlib.sha256(json.dumps(rows,sort_keys=True).encode()).hexdigest()
 
 def register(app,ctx):
+    global CLIENT_DB
+    CLIENT_DB=ctx.db
     @app.route('/api/clients/offline',methods=['GET','POST'])
     def offline_api():
         from modules.heimnetz_clients import agent_by_token
@@ -219,7 +241,7 @@ def register(app,ctx):
             if row is None:return jsonify(error='Folder not authorized'),403
             key=(agent['id'],gid)
             if action=='release' and request.method=='POST':LEASES.pop(key,None);return jsonify(ok=True)
-            LEASES[key]=time.monotonic()+120
+            LEASES[key]=dict(until=time.monotonic()+120,name=dict(agent).get('name') or dict(agent).get('hostname') or 'Client')
             activity=uuid.uuid4().hex;ACTIVE.add(activity)
             @after_this_request
             def finish(response):

@@ -9,7 +9,7 @@ import offline as client
 class Files(unittest.TestCase):
  def setUp(self):
   self.tmp=tempfile.TemporaryDirectory();self.root=Path(self.tmp.name);st=self.root.stat();self.row=dict(path=str(self.root),identity=[st.st_dev,st.st_ino],id='folder',name='Files',clients=[1],write=True)
- def tearDown(self):self.tmp.cleanup();server.ACTIVE.clear();server.LEASES.clear()
+ def tearDown(self):self.tmp.cleanup();server.ACTIVE.clear();server.LEASES.clear();server.CLIENT_DB=None
  def test_large_regular_file(self):
   p=self.root/'large.iso'
   with p.open('wb') as f:f.truncate(257*1024**2)
@@ -100,3 +100,72 @@ class Files(unittest.TestCase):
     with self.assertRaises(OSError):client.sync(row)
    self.assertEqual('restored',(local/'doc').read_text());(remote/'doc').unlink();client.sync(row);self.assertFalse((local/'doc').exists());self.assertTrue(list((local/'.hsm-recovery').rglob('doc')))
 if __name__=='__main__':unittest.main()
+
+class ClientBlockers(unittest.TestCase):
+ def tearDown(self):server.LEASES.clear();server.ACTIVE.clear();server.CLIENT_DB=None
+ def test_expired_request_cannot_block(self):
+  server.ACTIVE.add('orphaned-request')
+  server.LEASES[(1,'folder')]=dict(until=99,name='Example PC')
+  with patch.object(server.time,'monotonic',return_value=100):self.assertEqual([],server.blockers())
+ def test_name_and_multiple_folders(self):
+  for gid in ['one','two']:server.LEASES[(1,gid)]=dict(until=200,name='Example PC')
+  with patch.object(server.time,'monotonic',return_value=100):
+   rows=server.blockers();self.assertEqual(1,len(rows));self.assertEqual('Example PC',rows[0]['title'])
+ def test_offline_client_removed_other_client_retained(self):
+  import sqlite3
+  con=sqlite3.connect(':memory:');con.row_factory=sqlite3.Row
+  con.execute('CREATE TABLE client_agents(id,name,hostname,enabled,is_online,last_seen)')
+  con.execute("INSERT INTO client_agents VALUES(2,'Online PC','host',1,1,datetime('now','localtime'))")
+  server.CLIENT_DB=lambda:con
+  for cid in [1,2]:server.LEASES[(cid,'folder')]=dict(until=200,name='Old name')
+  with patch.object(server.time,'monotonic',return_value=100):
+   rows=server.blockers();self.assertEqual([2],[r['client_id'] for r in rows]);self.assertEqual('Online PC',rows[0]['title']);self.assertNotIn((1,'folder'),server.LEASES)
+
+class ProgressTests(unittest.TestCase):
+ def test_byte_weighting_eta_and_completion_cap(self):
+  values=[]
+  with patch.object(client.time,'monotonic',return_value=10):m=client.SyncProgress(values.append,1000,2)
+  with patch.object(client.time,'monotonic',return_value=20):
+   m.complete_file(100);m.show('large',400,force=True)
+   self.assertTrue(values[-1].startswith('50%'))
+   m.show('large',900,force=True)
+   self.assertTrue(values[-1].startswith('99%'))
+ def test_empty_plan(self):
+  values=[];m=client.SyncProgress(values.append,0,0);m.show('empty',force=True)
+  self.assertTrue(values[-1].startswith('0%'))
+ def test_reader_preserves_bytes_and_does_not_double_count_seek(self):
+  values=[];stream=io.BytesIO(b'abcdef');reader=client.ProgressReader(stream,values.append)
+  self.assertEqual(reader.read(4),b'abcd');reader.seek(0)
+  self.assertEqual(reader.read(2),b'ab');self.assertEqual(values,[4,4])
+  self.assertEqual(reader.read(),b'cdef');self.assertEqual(values[-1],6)
+
+class ReleaseOfflineTests(unittest.TestCase):
+ def test_pause_releases_all_pairs_and_resume_keeps_configuration(self):
+  with tempfile.TemporaryDirectory() as tmp, patch.object(client,'PAUSE_FILE',Path(tmp)/'paused'),patch.object(client,'config',return_value=[{'id':'a'},{'id':'b'}]),patch.object(client,'call') as api:
+   self.assertEqual(client.pause(),[]);self.assertTrue(client.paused());self.assertIsNone(client.due())
+   self.assertEqual(api.call_count,2)
+   with self.assertRaises(client.core.Error):client.require_running()
+   client.resume();client.require_running();self.assertFalse(client.paused())
+ def test_pause_survives_unreachable_server(self):
+  with tempfile.TemporaryDirectory() as tmp,patch.object(client,'PAUSE_FILE',Path(tmp)/'paused'),patch.object(client,'config',return_value=[{'id':'a'}]),patch.object(client,'call',side_effect=OSError('offline')):
+   self.assertEqual(client.pause(),['a']);self.assertTrue(client.paused())
+ def test_paused_transfer_does_not_read_source(self):
+  with patch.object(client,'paused',return_value=True):
+   stream=io.BytesIO(b'important');reader=client.ProgressReader(stream,lambda n:None)
+   with self.assertRaises(client.core.Error):reader.read()
+   self.assertEqual(stream.tell(),0)
+
+class TrayScheduleTests(unittest.TestCase):
+ def test_hidden_without_folders_and_custom_settings(self):
+  with patch.object(client,'config',return_value=[]):self.assertIsNone(client.schedule_mode())
+  with patch.object(client,'config',return_value=[dict(interval=7)]):self.assertEqual(client.schedule_mode(),'custom')
+ def test_presets_keep_folder_and_security_settings(self):
+  for mode,interval,startup in [('interval',10,False),('startup',0,True),('manual',0,False)]:
+   row=dict(id='a',local='/tmp/example',write=True,delete=False,limit_gib=9,sync_shutdown=True)
+   with patch.object(client,'config',return_value=[row]),patch.object(client,'save_config') as save:
+    client.set_schedule(mode);self.assertEqual(row['interval'],interval);self.assertEqual(row['sync_startup'],startup)
+    self.assertFalse(row['sync_shutdown']);self.assertEqual(row['local'],'/tmp/example');self.assertTrue(row['write']);self.assertEqual(row['limit_gib'],9)
+    self.assertEqual(client.schedule_mode(),mode);save.assert_called_once()
+ def test_schedule_does_not_resume_manual_release(self):
+  with tempfile.TemporaryDirectory() as tmp,patch.object(client,'PAUSE_FILE',Path(tmp)/'paused'),patch.object(client,'config',return_value=[]),patch.object(client,'save_config'):
+   client.PAUSE_FILE.write_text('paused');client.set_schedule('interval');self.assertTrue(client.paused())

@@ -1,6 +1,6 @@
 # CHANGELOG
 
-Aktuelle Version: **0.12-64**. Die vollständigen Änderungen stehen in der
+Aktuelle Version: **0.13-1** (Beta). Die vollständigen Änderungen stehen in der
 [Versionshistorie](docs/Heimserver_Manager_Versionsaenderungen.txt) und in der
 [englischen Versionshistorie](docs/en/Home_Server_Manager_Version_History.txt).
 
