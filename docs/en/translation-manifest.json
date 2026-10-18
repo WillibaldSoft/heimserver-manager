@@ -259,6 +259,11 @@
     "english_sha256": "002fe07bab03cbb66ac57ec61d69485332dcafe04a4fcc2a5b45498fd15c8a9d",
     "source_sha256": "52a57051cc6d847cd65508419bce38823a02a160f5598cad933c414167c025a5"
   },
+  "docs/SCREENSHOTS.md": {
+    "english": "docs/en/SCREENSHOTS.md",
+    "english_sha256": "0c56e4649ea22f559e9b55bde06f21af7fe96148299abdbf29785d1238e9550d",
+    "source_sha256": "e2f63227f6ccba3d09842c4e355c061198d027884624d4eaab5af62762b66a50"
+  },
   "docs/SERVER_PATHS.md": {
     "english": "docs/en/SERVER_PATHS.md",
     "english_sha256": "e3398139dc2ead1db765295c3f17379e867e49dc29f656c53a3779d981d43a80",
