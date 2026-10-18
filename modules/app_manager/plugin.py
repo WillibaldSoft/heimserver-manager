@@ -849,9 +849,9 @@ def _session_progress_values(session, kind):
     done=sum(number(stats.get(key)) for key in ('ok','failed','blocked','skipped','simulated'))
     total=max(6 if kind=='backup' else 1,number(stats.get('total')),len(steps))
     state=session.get('state','unknown')
-    terminal=state in ('completed','failed','blocked','simulated','prepared','finished','interrupted')
+    terminal=state in ('completed','success','failed','error','blocked','simulated','prepared','finished','interrupted')
     percent=min(99,int(done*100/total))
-    if state in ('completed','finished') and not number(stats.get('failed')):percent=100
+    if state in ('completed','success','finished') and not number(stats.get('failed')):percent=100
     return done,total,percent,terminal
 
 
@@ -872,7 +872,7 @@ def _session_api_response(run_dir,kind):
     if not isinstance(result,dict):result={}
     done,total,percent,terminal=_session_progress_values(session,kind)
     effective_state='failed' if session.get('state')=='completed' and (session.get('statistics') or {}).get('failed') else session.get('state','unknown')
-    response=jsonify(ok=True,state=effective_state,progress_percent=percent,total_steps=total,completed_steps=done,terminal=terminal,
+    response=jsonify(ok=True,result_ready=bool(result),state=effective_state,progress_percent=percent,total_steps=total,completed_steps=done,terminal=terminal,
         current_step=session.get('current_step'),current_action=session.get('current_action'),current_detail=session.get('current_detail'),current_path_key=session.get('current_path_key'),
         updated_at=session.get('updated_at'),statistics=session.get('statistics') or {},steps=session.get('steps') or [],
         archive=session.get('archive') or result.get('archive'),archive_size=result.get('archive_size'),run_dir=str(run_dir))
@@ -880,13 +880,18 @@ def _session_api_response(run_dir,kind):
     return response
 
 
-def _live_session_widget(ctx, kind, app_id, run_id):
+def _live_session_widget(ctx, kind, app_id, run_id, refresh_on_finish=False):
     api = "/api/apps/{}/{}/runs/{}/session".format(
         ctx.esc(app_id),
         ctx.esc(kind),
         ctx.esc(run_id),
     )
 
+    from .settings import load_settings
+    try:
+        interval = max(1, min(60, int(load_settings().get("live_refresh_seconds", 2)))) * 1000
+    except (TypeError, ValueError):
+        interval = 2000
     return _ui_html("""
 <div class='card' id='live-session-card' data-api='__API__'>
   <h3>Live-Status</h3>
@@ -1021,8 +1026,11 @@ def _live_session_widget(ctx, kind, app_id, run_id):
 
       renderSteps(d.steps || []);
 
-      if (!d.terminal) {
-        setTimeout(poll, 2000);
+      if (d.terminal && __REFRESH_FINISH__) {
+        if (d.result_ready) { window.location.reload(); return; }
+        setTimeout(poll, __POLL_MS__);
+      } else if (!d.terminal) {
+        setTimeout(poll, __POLL_MS__);
       }
     } catch(e) {
       setText("live-state", "Statusabfrage fehlgeschlagen; erneuter Versuch folgt");
@@ -1035,7 +1043,7 @@ def _live_session_widget(ctx, kind, app_id, run_id):
   poll();
 })();
 </script>
-""").replace("__API__", api)
+""").replace("__API__", api).replace("__POLL_MS__", str(interval)).replace("__REFRESH_FINISH__", "true" if refresh_on_finish else "false")
 
 
 
@@ -1083,12 +1091,40 @@ def _full_app_data(m):
 UPDATE_CACHE_FILE = Path(os.path.join(os.environ.get('SERVER_MANAGER_STATE', '/var/lib/server-manager'), 'app_update_status.json'))
 UPDATE_JOB_FILE = Path(os.path.join(os.environ.get('SERVER_MANAGER_STATE', '/var/lib/server-manager'), 'app_update_job.json'))
 _UPDATE_JOB_LOCK = threading.Lock()
+_UPDATE_PROCESS_STARTED = datetime.now()
+
+
+def _update_process_identity(pid):
+    try:
+        boot = Path('/proc/sys/kernel/random/boot_id').read_text().strip()
+        stat = Path('/proc/{}/stat'.format(int(pid))).read_text()
+        started = stat.rsplit(')', 1)[1].split()[19]
+        return '{}:{}:{}'.format(boot, int(pid), started)
+    except (OSError, ValueError, IndexError):
+        return None
+
+
+_UPDATE_PROCESS_ID = _update_process_identity(os.getpid())
+
 
 
 def _read_update_job():
     try:
         if UPDATE_JOB_FILE.exists():
-            return json.loads(UPDATE_JOB_FILE.read_text(encoding="utf-8"))
+            data = json.loads(UPDATE_JOB_FILE.read_text(encoding="utf-8"))
+            if data.get('running'):
+                owner = data.get('owner_process')
+                if owner:
+                    interrupted = _update_process_identity(data.get('owner_pid', 0)) != owner
+                else:
+                    # Legacy daemon-thread jobs cannot survive a manager restart.
+                    try:
+                        interrupted = datetime.fromisoformat(data['updated_at']) < _UPDATE_PROCESS_STARTED
+                    except (KeyError, ValueError, TypeError):
+                        interrupted = True
+                if interrupted:
+                    data.update(running=False, state='failed', error='Updateprüfung durch einen Manager-Neustart unterbrochen. Erneut starten.', finished_at=datetime.now().isoformat(timespec='seconds'))
+            return data
     except Exception:
         pass
     return {
@@ -1097,9 +1133,31 @@ def _read_update_job():
     }
 
 
+def get_blockers(ctx=None):
+    """Only the live update-check job prevents automatic shutdown."""
+    job = _read_update_job()
+    if not job.get('running'):
+        return []
+    label = job.get('current_label') or tr('Vorbereitung')
+    return [dict(source='Apps', type='app-update-check',
+                 title=tr('App-Updateprüfung') + ' – ' + str(label),
+                 reason=tr('Versionsprüfung läuft; es werden keine Updates installiert.'),
+                 priority=90, url='/apps')]
+
+
 def _write_update_job(data):
     UPDATE_JOB_FILE.parent.mkdir(parents=True, exist_ok=True)
-    UPDATE_JOB_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    data = dict(data)
+    if data.get('running'):
+        data.update(owner_pid=os.getpid(), owner_process=_UPDATE_PROCESS_ID)
+    fd, name = tempfile.mkstemp(dir=UPDATE_JOB_FILE.parent, prefix='.update-job-')
+    try:
+        with os.fdopen(fd, 'w', encoding='utf-8') as handle:
+            json.dump(data, handle, ensure_ascii=False, indent=2)
+            handle.write('\n')
+        os.replace(name, UPDATE_JOB_FILE)
+    finally:
+        if os.path.exists(name):os.unlink(name)
 
 
 def _set_update_job(**kwargs):
@@ -1355,9 +1413,23 @@ def register(app, ctx):
         if not m:
             return redirect("/apps")
 
-        result = _safe_call(lambda: m.update_check(), "update_check")
-        _store_update_check(app_id, result)
-
+        with _UPDATE_JOB_LOCK:
+            if _read_update_job().get('running'):
+                return redirect('/apps')
+            _write_update_job(dict(running=True, state='running', current_app=app_id,
+                                   current_label=m.label, done=0, total=1,
+                                   started_at=datetime.now().isoformat(timespec='seconds'),
+                                   updated_at=datetime.now().isoformat(timespec='seconds'),
+                                   finished_at=None, error=None))
+        try:
+            result = _safe_call(lambda: m.update_check(), "update_check")
+            _store_update_check(app_id, result)
+        except Exception as exc:
+            _set_update_job(running=False, state='failed', error=str(exc),
+                            finished_at=datetime.now().isoformat(timespec='seconds'))
+        else:
+            _set_update_job(running=False, state='completed', done=1,
+                            finished_at=datetime.now().isoformat(timespec='seconds'))
         return redirect("/apps")
 
     @app.route("/apps")
@@ -6124,69 +6196,14 @@ def register(app, ctx):
             ctx.esc(app_id)
         )
 
-        body += _ui_html("<p>Modus: {}<br>Status: <b>{}</b></p>").format(
+        body += _ui_html("<p>Modus: {}<br>Status: <b id='run-summary-state'>{}</b></p>").format(
             mode_badge,
             ctx.esc(_ui_text(state))
         )
 
 
-        # Live Run Status
-        current_step = session.get("current_step")
-        current_action = session.get("current_action")
-
-        started_at = (
-            session.get("started_at")
-            or result.get("started_at")
-            or ""
-        )
-
-        finished_at = (
-            session.get("finished_at")
-            or result.get("finished_at")
-            or ""
-        )
-
-
-        body += _ui_html("<div class='card' style='border-left:5px solid #2563eb'>")
-        body += _ui_html("<h3>Live Status</h3>")
-
-        body += _ui_html("<p>")
-
-        if state in ("running", "backup", "preflight"):
-            body += _ui_html("<span class='warn'>🟡 Läuft</span><br>")
-        elif state in ("completed", "success"):
-            body += _ui_html("<span class='ok'>🟢 Abgeschlossen</span><br>")
-        elif state in ("failed", "error"):
-            body += _ui_html("<span class='err'>🔴 Fehler</span><br>")
-        else:
-            body += _ui_html("<span class='warn'>⚪ {}</span><br>").format(
-                ctx.esc(_ui_text(state))
-            )
-
-
-        if current_step:
-            body += _ui_html("<b>Aktueller Schritt:</b> {}<br>").format(
-                ctx.esc(current_step)
-            )
-
-        if current_action:
-            body += _ui_html("<b>Aktion:</b> {}<br>").format(
-                ctx.esc(current_action)
-            )
-
-        if started_at:
-            body += _ui_html("<b>Start:</b> {}<br>").format(
-                ctx.esc(started_at)
-            )
-
-        if finished_at:
-            body += _ui_html("<b>Ende:</b> {}<br>").format(
-                ctx.esc(finished_at)
-            )
-
-        body += _ui_html("</p>")
-        body += _ui_html("</div>")
-
+        terminal = state in ('completed','success','failed','error','blocked','simulated','prepared','finished','interrupted')
+        body += _live_session_widget(ctx, "update", app_id, run_id, refresh_on_finish=not terminal)
 
         if simulate:
             body += _ui_html("<p class='ok'><b>Keine Änderungen durchgeführt.</b></p>")
@@ -6266,6 +6283,13 @@ def register(app, ctx):
             body,
             "Apps"
         )
+
+    @app.get("/api/apps/<app_id>/update/runs/<run_id>/session")
+    def api_update_run_session(app_id, run_id):
+        m = get_manager(app_id)
+        if not m:
+            return jsonify(ok=False, error='app not found'), 404
+        return _session_api_response(Path(UPDATE_LOG_ROOT) / m.app_id / run_id, "update")
 
     @app.route("/api/apps/<app_id>/backup/runs/<run_id>/session")
     def api_backup_run_session(app_id, run_id):

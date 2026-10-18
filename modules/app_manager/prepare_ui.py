@@ -43,6 +43,7 @@ def card(app_id):
 def script(app_id):
     endpoint='/apps/'+quote(app_id,safe='')+'/update/prepare'
     api='/api/apps/'+quote(app_id,safe='')+'/update/prepare-status'
+    baseline=(latest(app_id) or {}).get('run_id')
     return _ui_html('''<script>
 (()=>{
  const endpoint=__ENDPOINT__, api=__API__;
@@ -61,21 +62,33 @@ def script(app_id):
   panel.scrollIntoView({behavior:'smooth',block:'center'});
   form.querySelectorAll('button').forEach(b=>b.disabled=true);
   let stopped=false;
+  const baseline=__BASELINE__, submittedAt=Date.now();
   const poll=async()=>{
    if(stopped)return;
-   try {const response=await fetch(api,{cache:'no-store'});if(response.ok){const data=await response.json();const job=data.backup;if(job)detail.textContent=job.current_detail||job.current_action||'Backup läuft …';}}catch(e){}
+   try {
+    const response=await fetch(api,{cache:'no-store'});
+    if(response.ok){
+     const data=await response.json(), prepared=data.prepare, job=data.backup;
+     // Never follow a result left over from an earlier preparation.
+     if(prepared && prepared.run_id!==baseline && Date.parse(prepared.started)>=submittedAt-5000 && typeof prepared.ok==='boolean' && prepared.url){
+      stopped=true;location.assign(prepared.url);return;
+     }
+     if(job)detail.textContent=job.current_detail||job.current_action||'Backup läuft …';
+    }
+   }catch(e){}
    if(!stopped)setTimeout(poll,2000);
   };poll();
   try {
    const response=await fetch(endpoint,{method:'POST',body:new FormData(form),headers:{'Accept':'application/json','X-Prepare-Async':'1'}});
-   const data=await response.json();stopped=true;
-   if(data.url){location.assign(data.url);return;}
+   if(!response.ok)throw new Error("HTTP "+response.status);
+   const data=await response.json();
+   if(data.url){stopped=true;location.assign(data.url);return;}
    throw new Error(data.error||'Ergebnis nicht verfügbar');
   }catch(e){
-   stopped=true;progress.remove();
+   if(stopped)return;
    detail.textContent='Verbindung oder Ergebnisabfrage fehlgeschlagen. Der Auftrag kann weiterlaufen. Bitte nicht erneut starten; Update-Plan oder Update-Runs öffnen und Status prüfen.';
    const link=document.createElement('a');link.href='/apps/'+__APPID__+'/update';link.textContent='Status erneut prüfen';link.className='btn';panel.append(link);
   }
  });
 })();
-</script>''').replace('__ENDPOINT__',json.dumps(endpoint)).replace('__API__',json.dumps(api)).replace('__APPID__',json.dumps(app_id))
+</script>''').replace('__ENDPOINT__',json.dumps(endpoint)).replace('__API__',json.dumps(api)).replace('__APPID__',json.dumps(app_id)).replace('__BASELINE__',json.dumps(baseline))

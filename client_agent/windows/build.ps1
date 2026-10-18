@@ -5,7 +5,7 @@ $ErrorActionPreference = 'Stop'
 $compiler = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
 if (!(Test-Path $compiler)) { $compiler = Join-Path $env:WINDIR 'Microsoft.NET\Framework\v4.0.30319\csc.exe' }
 if (!(Test-Path $compiler)) { throw '.NET Framework C# compiler not found.' }
-$output = Join-Path $OutputDirectory 'Heimserver_Manager_Client_0.2.11_Windows.exe'
+$output = Join-Path $OutputDirectory 'Heimserver_Manager_Client_0.2.12_Windows.exe'
 if (Test-Path $output) { throw 'Existing release must not be overwritten.' }
 New-Item -ItemType Directory -Force $OutputDirectory | Out-Null
 $sources = @('I18n.cs','TrayIcons.cs','DeviceBinding.cs','ClientCore.cs','ClientForm.cs','WindowsIntegration.cs','Program.cs','ClientExtras.cs','ExtrasForm.cs','OfflineFiles.cs') | ForEach-Object { Join-Path $PSScriptRoot $_ }

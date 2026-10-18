@@ -1,3 +1,4 @@
+from system_recovery_ui import configure_scroll,fit_window,install_scroll_style
 from pathlib import Path
 import hashlib,json,subprocess,tempfile
 from gi.repository import Gtk,GLib
@@ -6,8 +7,8 @@ from client_i18n import tr
 from extras_ui import folder,confirm
 
 def show(app):
-    d=Gtk.Dialog(title=tr('Offline-Dateien'),transient_for=app.window);d.set_default_size(700,560);d.add_button(tr('Schließen'),Gtk.ResponseType.CLOSE)
-    scroll=Gtk.ScrolledWindow();scroll.set_policy(Gtk.PolicyType.NEVER,Gtk.PolicyType.AUTOMATIC);scroll.set_min_content_height(480)
+    d=Gtk.Dialog(title=tr('Offline-Dateien'),transient_for=app.window);fit_window(d,760,900);d.add_button(tr('Schließen'),Gtk.ResponseType.CLOSE)
+    scroll=Gtk.ScrolledWindow();configure_scroll(scroll);scroll.set_min_content_height(180)
     d.get_content_area().pack_start(scroll,True,True,0)
     box=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=8);scroll.add(box)
     box.add(Gtk.Label(label=tr('Freigegebene Serverordner als eigene lokale Kopie. Konflikte bleiben auf beiden Geräten erhalten und werden gemeldet. Kein Backup-Ersatz. Maximal 5000 Dateien; keine feste Dateigrößengrenze; keine Links oder leeren Ordner.'),wrap=True))
@@ -95,6 +96,19 @@ def show(app):
         except (OSError,ValueError):pass
         automatic.set_text(text)
     automatic_status()
+    def live_progress():
+        automatic_status()
+        try:
+            data=json.loads((offline.ROOT/'progress.json').read_text())
+            if data.get('state')=='running':
+                os_alive=True
+                try:__import__('os').kill(int(data['pid']),0)
+                except (ProcessLookupError,ValueError,KeyError):os_alive=False
+                if os_alive:automatic.set_text(data.get('folder','')+' · '+data.get('detail',''))
+        except (OSError,ValueError):pass
+        return True
+    progress_timer=GLib.timeout_add_seconds(1,live_progress)
+    d.connect('destroy',lambda *_:GLib.source_remove(progress_timer))
     def selected(*_):
         gid=choice.get_active_id();old=next((r for r in offline.config() if r['id']==gid),{})
         refresh_mounts(old.get('source_mount'))
@@ -166,7 +180,7 @@ def show(app):
         gid=choice.get_active_id()
         if not gid:app.message(tr('Zuerst eine Freigabe auswählen.'));return
         browser=Gtk.Dialog(title=tr('Server-Unterordner auswählen'),transient_for=d)
-        browser.set_default_size(600,400);browser.add_button(tr('Schließen'),Gtk.ResponseType.CLOSE)
+        fit_window(browser,760,900);browser.add_button(tr('Schließen'),Gtk.ResponseType.CLOSE)
         area=browser.get_content_area();label=Gtk.Label(wrap=True);area.add(label)
         folders=Gtk.ComboBoxText();area.add(folders);state={};alive=[True]
         def load_folder(target):

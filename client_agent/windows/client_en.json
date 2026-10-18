@@ -549,5 +549,7 @@
   "Unterordner geladen.": "Subfolders loaded.",
   "Eine Ebene höher": "Up one level",
   "Diesen Ordner zur Auswahl hinzufügen": "Add this folder to the selection",
-  "Freigegebene Serverordner als eigene lokale Kopie. Konflikte bleiben auf beiden Geräten erhalten und werden gemeldet. Kein Backup-Ersatz. Maximal 5000 Dateien; keine feste Dateigrößengrenze; keine Links oder leeren Ordner.": "Keep permitted server folders as local copies. Conflicts are retained on both devices and reported. Not a backup replacement. Maximum 5000 files; no fixed file size limit; no links or empty directories."
+  "Freigegebene Serverordner als eigene lokale Kopie. Konflikte bleiben auf beiden Geräten erhalten und werden gemeldet. Kein Backup-Ersatz. Maximal 5000 Dateien; keine feste Dateigrößengrenze; keine Links oder leeren Ordner.": "Keep permitted server folders as local copies. Conflicts are retained on both devices and reported. Not a backup replacement. Maximum 5000 files; no fixed file size limit; no links or empty directories.",
+  "SMB-Löschung nicht erlaubt; Datei unverändert: ": "SMB deletion is not permitted; file unchanged: ",
+  "SMB-Rückholkopie prüfen: ": "Check SMB recovery copy: "
 }

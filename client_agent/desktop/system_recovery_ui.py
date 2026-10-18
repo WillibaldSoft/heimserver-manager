@@ -6,24 +6,54 @@ except ModuleNotFoundError:
 import re
 import json,subprocess,threading
 from pathlib import Path
-from gi.repository import Gtk,GLib
+from gi.repository import Gtk,GLib,Gdk
+
+def fit_window(window,width=820,height=900):
+    """Use the monitor work area without covering desktop panels."""
+    display=Gdk.Display.get_default()
+    parent=window.get_transient_for()
+    monitor=(display.get_monitor_at_window(parent.get_window()) if parent and parent.get_window() else display.get_primary_monitor()) if display else None
+    if monitor is None and display:monitor=display.get_monitor(0)
+    if monitor:
+        area=monitor.get_workarea()
+        width=min(width,max(320,area.width-48))
+        height=min(height,max(240,area.height-64))
+    window.set_default_size(width,height)
+
+
+def install_scroll_style():
+    css=Gtk.CssProvider()
+    css.load_from_data(b"scrollbar.vertical, scrollbar.vertical slider { min-width: 20px; } scrollbar.horizontal, scrollbar.horizontal slider { min-height: 20px; }")
+    Gtk.StyleContext.add_provider_for_screen(Gdk.Screen.get_default(),css,Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+
+
+def configure_scroll(scroll):
+    """Show a non-overlay scrollbar only when content needs scrolling."""
+    scroll.set_policy(Gtk.PolicyType.NEVER,Gtk.PolicyType.AUTOMATIC)
+    scroll.set_overlay_scrolling(False)
+    scroll.get_vscrollbar().set_size_request(24,-1)
+    css=Gtk.CssProvider()
+    css.load_from_data(b"scrollbar.vertical, scrollbar.vertical slider { min-width: 20px; } scrollbar.vertical slider { min-height: 36px; }")
+    scroll.get_vscrollbar().get_style_context().add_provider(css,Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 
 PREFIX='HSM_RECOVERY_PROMPT:'
 def open_dialog(app):
     dialog=Gtk.Dialog(title=tr('System sichern & wiederherstellen'),transient_for=app.window)
-    dialog.set_default_size(780,580)
+    fit_window(dialog)
     close=dialog.add_button(tr('Schließen'),Gtk.ResponseType.CLOSE)
-    page=Gtk.ScrolledWindow();page.set_vexpand(True);dialog.get_content_area().pack_start(page,True,True,0)
+    page=Gtk.ScrolledWindow();page.set_vexpand(True);configure_scroll(page);dialog.get_content_area().pack_start(page,True,True,0)
     box=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=10);page.add(box)
     note=Gtk.Label(label=tr('HTTPS: direkt zum Manager sichern, ohne Ordnerauswahl, SMB oder NFS. USB/NFS: separater Assistent für eine bereits eingehängte Ablage. Kein Festplattenabbild; Partitionierung und Bootloader bleiben separat.'),wrap=True);box.add(note)
     full=Gtk.CheckButton(label=tr('Vollständiges Linux-System statt nur eigener Home-Daten sichern'));full.set_active(True);box.add(full)
     box.add(Gtk.Label(label=tr('Standard: gemeinsamer PC-Systemstand und getrennte persönliche Daten. Zusätzliche Datenplatten und Serverfreigaben nur im ausdrücklich neu gesicherten Systemstand nach Auswahl.'),wrap=True))
     refresh=Gtk.CheckButton(label=tr('Gemeinsamen PC-Systemstand neu sichern (Freigabe erforderlich)'));box.add(refresh)
     box.add(Gtk.Label(label=tr('Ein vorhandener PC-Systemstand wird wiederverwendet. Persönliche Daten bleiben pro Benutzer getrennt und werden inkrementell gesichert. Nach System- oder Programmänderungen den gemeinsamen Stand ausdrücklich neu sichern. Andere Benutzer müssen ihr Home selbst sichern.'),wrap=True))
+    offline=Gtk.CheckButton(label=tr('Offline-Ordner im neuen Systemstand mitsichern'));offline.set_active(False);box.add(offline)
+    box.add(Gtk.Label(label=tr('Standardmäßig ausgeschlossen: konfigurierte lokale Offline-Kopien aller Benutzer außerhalb ihrer Homes. Bestehende Systemstände bleiben unverändert. Zum Mitsichern einen neuen Systemstand wählen; zusätzliche Datenträger müssen separat ausgewählt sein.'),wrap=True))
     login=Gtk.Button(label=tr('Am Manager anmelden / Konto wechseln'));box.add(login)
     def sign_in(_):
         import extras_ui
-        extras_ui.manager_login(app,on_success=lambda:append(tr('Anmeldung übernommen. Sicherungsstatus erneut prüfen.')+'\n'))
+        extras_ui.manager_login(app,on_success=account_updated)
     login.connect('clicked',sign_in)
     status_button=Gtk.Button(label=tr('Sicherungsstatus dieses PCs prüfen'));box.add(status_button)
     cancel_system=Gtk.Button(label=tr('Unvollständige PC-Systemübertragung verwerfen (Freigabe erforderlich)'));box.add(cancel_system)
@@ -53,7 +83,7 @@ def open_dialog(app):
     volumes.connect('clicked',choose_volumes)
     private=Gtk.CheckButton(label=tr('Netzwerkprofile einschließlich Zugangsdaten mitsichern'));box.add(private)
     box.add(Gtk.Label(label=tr('HTTPS: vorhandenen Systemstand prüfen, danach eigene persönliche Daten sichern. Neue Systemstände erfordern Administratorrechte im Manager oder die Benutzerfreigabe für Systemsicherungen. Datenbanken/VMs/Container vorher geordnet stoppen.'),wrap=True))
-    scroll=Gtk.ScrolledWindow();scroll.set_vexpand(True);scroll.set_size_request(-1,150)
+    scroll=Gtk.ScrolledWindow();configure_scroll(scroll);scroll.set_size_request(-1,160)
     view=Gtk.TextView(editable=False,wrap_mode=Gtk.WrapMode.WORD_CHAR);scroll.add(view);box.pack_start(scroll,True,True,0)
     meter=Gtk.ProgressBar(show_text=True);meter.set_text(tr('Sicherungsumfang noch nicht ermittelt'));box.add(meter)
     start=Gtk.Button(label=tr('USB/NFS-Assistent – lokale oder eingehängte Ablage'));box.add(start)
@@ -156,7 +186,7 @@ def open_dialog(app):
         accepted=question.run()==Gtk.ResponseType.OK;question.destroy()
         if not accepted:return
         append(tr('HTTPS-Sicherung: Verbindung zum Manager prüfen; kein lokaler Zielordner erforderlich.\n'))
-        options={'source_root':source.get_text().strip() or '/','extra_mounts':[p.strip() for p in extra.get_text().split(';') if p.strip()],'network_profiles':private.get_active(),'refresh_system':refresh.get_active()}
+        options={'source_root':source.get_text().strip() or '/','extra_mounts':[p.strip() for p in extra.get_text().split(';') if p.strip()],'network_profiles':private.get_active(),'refresh_system':refresh.get_active(),'include_offline':offline.get_active()}
         state['busy']=True;login.set_sensitive(False);close.set_sensitive(False);start.set_sensitive(False);server.set_sensitive(False);restore.set_sensitive(False)
         def confirm_exclusions(rows):
             event=threading.Event();answer=[]
@@ -167,7 +197,7 @@ def open_dialog(app):
                 question.set_default_response(Gtk.ResponseType.CANCEL);question.set_default_size(720,420)
                 content=question.get_content_area()
                 label=Gtk.Label(label=tr('Diese Dateien und Ordner einschließlich ihrer Inhalte fehlen in dieser Sicherung. Nur für diesen Lauf ausschließen und fortfahren?'));label.set_line_wrap(True);content.add(label)
-                scroll=Gtk.ScrolledWindow();scroll.set_vexpand(True)
+                scroll=Gtk.ScrolledWindow();configure_scroll(scroll);scroll.set_vexpand(True)
                 report=Gtk.TextView();report.set_editable(False);report.get_buffer().set_text('\n\n'.join(r['path']+'\n'+r['reason'] for r in rows));scroll.add(report);content.add(scroll)
                 question.show_all();answer.append(question.run()==Gtk.ResponseType.OK);question.destroy();event.set();return False
             GLib.idle_add(show)
@@ -221,7 +251,7 @@ def open_dialog(app):
     cancel_system.connect('clicked',discard_system)
     def scope_changed(*_):
         enabled=full.get_active()
-        for widget in (source,extra,volumes,private,refresh):widget.set_sensitive(enabled)
+        for widget in (source,extra,volumes,private,refresh,offline):widget.set_sensitive(enabled)
         server.set_label(tr('Diesen Linux-Client direkt auf den Server sichern (HTTPS)') if enabled else tr('Eigene Home-Daten auf den Server sichern (HTTPS)'))
     full.connect('toggled',scope_changed);scope_changed()
     restore=Gtk.Button(label=tr('Systemstand / Komponenten / einzelne Dateien wiederherstellen'))
@@ -233,6 +263,36 @@ def open_dialog(app):
     server.connect('clicked',server_start)
     start.connect('clicked',launch)
     dialog.connect('delete-event',lambda *_:state['busy'])
+    # Present one ordered workflow; keep uncommon and destructive actions collapsed.
+    explanations=[child for child in box.get_children() if isinstance(child,Gtk.Label)]
+    for child in box.get_children():box.remove(child)
+    box.set_border_width(12)
+    def label(text):
+        widget=Gtk.Label(label=tr(text),wrap=True,xalign=0)
+        widget.set_max_width_chars(70)
+        return widget
+    def section(title,widgets,collapsed=False):
+        content=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=8)
+        for widget in widgets:content.pack_start(widget,False,False,0)
+        if collapsed:
+            frame=Gtk.Expander(label=tr(title));frame.add(content)
+        else:
+            frame=Gtk.Frame(label=tr(title));frame.add(content)
+        content.set_border_width(10);box.pack_start(frame,False,False,0)
+        return frame
+    account=label('')
+    def account_updated():
+        import backup
+        account.set_text(tr('Manager-Konto: ')+backup.ACCOUNT[2]['username'] if backup.ACCOUNT else tr('Für persönliche Sicherungen am Manager anmelden.'))
+        login.set_label(tr('Konto wechseln') if backup.ACCOUNT else tr('Am Manager anmelden'))
+    account_updated()
+    section('1. Manager-Konto',[account,login])
+    section('2. Sicherungsumfang',[full,explanations[2],refresh])
+    section('Erweiterte Optionen für einen neuen Systemstand',[explanations[1],extra,volumes,offline,explanations[3],private,explanations[-1]],True)
+    section('3. Sichern oder wiederherstellen',[server,status_button,restore])
+    section('Fortschritt und Protokoll',[meter,scroll,cancel])
+    section('Alternative: USB oder NFS',[note,start],True)
+    section('Unvollständige Übertragung verwalten',[cancel_system],True)
     dialog.show_all()
     while True:
         response=dialog.run()

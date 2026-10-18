@@ -1,7 +1,7 @@
 {
-  "version": "0.2.11",
-  "date": "2026-10-10",
-  "sha256": "90984d8566fcd2f4d0ee47e69eef83665328e5aad12c037eead9ea6b0fd3aa25",
+  "version": "0.2.12",
+  "date": "2026-10-18",
+  "sha256": "152f3cbf9a9483055bca1c1c1f2f30b4989fc79677378ed471f0ea327920ef62",
   "status": "experimental",
   "target": "Windows 10 / 11, .NET Framework 4.8"
 }

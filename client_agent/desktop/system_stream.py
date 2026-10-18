@@ -217,6 +217,9 @@ def inventory(options):
             path=source/name
             if path.is_file():result['commands']['offline:'+name]=dict(status='ok',output=path.read_text(errors='replace')[:8*1024**2])
     result['component']=options.get('component','legacy-full')
+    if options.get('component')=='system':
+        result['offline_copy_paths']=offline_backup_paths(source)
+        result['excluded_offline_paths']=[] if options.get('include_offline',False) else result['offline_copy_paths']
     result['excluded_user_homes']=sorted(component_homes(source)) if options.get('component')=='system' else []
     omitted=[r for r in result['selected_mounts'] if any(r['target']==h or r['target'].startswith(h+'/') for h in result['excluded_user_homes'])]
     result['selected_mounts']=[r for r in result['selected_mounts'] if r not in omitted]
@@ -225,6 +228,29 @@ def inventory(options):
     if options.get('component')=='system':result['coverage'].remove('all-local-users');result['coverage'].remove('desktop-state')
     result['limitations']=['No automatic partitioning or bootloader installation','Live databases/VMs require shutdown or application-consistent backups','Network profiles only if explicitly selected','Cross-distribution migration uses target packages; binary system restore requires the same platform']
     return result
+
+def offline_backup_paths(source):
+    """Read configured local copies from normal users without following config links."""
+    result=set()
+    for line in (source/'etc/passwd').read_text().splitlines():
+        fields=line.split(':')
+        if len(fields)!=7 or not fields[2].isdigit() or not 1000<=int(fields[2])<65534:continue
+        home=Path(fields[5])
+        if not home.is_absolute() or '..' in home.parts:continue
+        config=source/home.relative_to('/')/'.config/server-manager-client/offline/folders.json'
+        if any(p.is_symlink() for p in (config,*config.parents)):raise ValueError('Symbolic offline configuration path; check before backup')
+        if not config.exists():continue
+        if config.stat().st_size>4*1024**2:raise ValueError('Offline configuration too large')
+        rows=json.loads(config.read_text())
+        if not isinstance(rows,list):raise ValueError('Invalid offline folder configuration')
+        for row in rows:
+            value=row.get('local') if isinstance(row,dict) else None
+            if not value:continue
+            path=Path(value)
+            if not path.is_absolute() or '..' in path.parts or len(path.parts)<3:
+                raise ValueError('Invalid offline backup folder; check configuration')
+            result.add(str(path))
+    return sorted(result)
 
 def personal_exclusions():
     """Explicit per-user exclusions, relative to that user's home only."""
@@ -273,6 +299,7 @@ def file_names(source,options,rows,on_denied=None):
         if any((r['target']==home or home.startswith(r['target'].rstrip('/')+'/')) and r['fstype'] in NETWORK_FILESYSTEMS for r in rows):raise ValueError(tr('Das persönliche Home liegt auf einer Netzwerkfreigabe; separat ausdrücklich sichern.'))
         roots=[home]
         excluded.update(personal_exclusions())
+    if options.get('component')=='system' and not options.get('include_offline',False):excluded.update(offline_backup_paths(source))
     excluded.update(approved_exclusions(options))
     roots=[p for p in roots if not any(p==h or p.startswith(h+'/') for h in excluded)]
     mounted={str(source/r['target'].lstrip('/')) for r in rows if r['target']!='/'}

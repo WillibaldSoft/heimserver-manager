@@ -1,3 +1,4 @@
+from system_recovery_ui import configure_scroll,fit_window,install_scroll_style
 """GUI for downloading and restoring an HTTPS system archive from a live system."""
 try:
     from client_i18n import tr
@@ -9,9 +10,9 @@ from gi.repository import Gtk,GLib
 import backup,core,system_recovery,system_components
 
 def open_restore(app,parent,selected_id=None):
-    d=Gtk.Dialog(title=tr('HTTPS-Systemarchiv wiederherstellen'),transient_for=parent);d.set_default_size(720,440)
+    d=Gtk.Dialog(title=tr('HTTPS-Systemarchiv wiederherstellen'),transient_for=parent);fit_window(d,760,900)
     close=d.add_button(tr('Schließen'),Gtk.ResponseType.CLOSE)
-    scroll=Gtk.ScrolledWindow();scroll.set_vexpand(True);d.get_content_area().add(scroll)
+    scroll=Gtk.ScrolledWindow();configure_scroll(scroll);scroll.set_vexpand(True);d.get_content_area().add(scroll)
     box=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=10);scroll.add(box)
     box.add(Gtk.Label(label=tr('Vorhandenes Linux-Zielsystem separat einhängen. ZIP wird auf eine externe Linux-Platte geladen und vor Änderungen vollständig geprüft. Dafür dort mindestens zweimal Archivgröße frei halten. System/Komponenten nur im Live-System und auf gleicher Plattform; passende Zielpartitionen vorher einhängen. Einzeldateien können im laufenden System in einen neuen Ordner zurückgesichert werden. Partitionierung und Bootloader bleiben manuell.'),wrap=True))
     scope=Gtk.ComboBoxText()
@@ -60,8 +61,8 @@ def open_restore(app,parent,selected_id=None):
         q.destroy();event.set();return False
     def migration_prompt(context,prompt,event,answer):
         q=Gtk.Dialog(title=tr('Systemmigration – Auswahl'),transient_for=d,modal=True)
-        q.set_default_size(760,500);q.add_buttons(tr('Abbrechen'),Gtk.ResponseType.CANCEL,tr('Weiter'),Gtk.ResponseType.OK)
-        area=q.get_content_area();scroll=Gtk.ScrolledWindow();scroll.set_vexpand(True)
+        fit_window(q,760,900);q.add_buttons(tr('Abbrechen'),Gtk.ResponseType.CANCEL,tr('Weiter'),Gtk.ResponseType.OK)
+        area=q.get_content_area();scroll=Gtk.ScrolledWindow();configure_scroll(scroll);scroll.set_vexpand(True)
         view=Gtk.TextView(editable=False,wrap_mode=Gtk.WrapMode.WORD_CHAR);view.get_buffer().set_text(context);scroll.add(view);area.pack_start(scroll,True,True,0)
         area.add(Gtk.Label(label=prompt,wrap=True));entry=Gtk.Entry();area.add(entry);q.show_all()
         if q.run()==Gtk.ResponseType.OK:answer.append(entry.get_text())

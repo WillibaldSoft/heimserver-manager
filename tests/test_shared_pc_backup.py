@@ -205,3 +205,19 @@ class Interrupted(SharedPC):
   row=self.request('cas-pending&personal=1').json['uploads'][0];data=dict(id=sid,revision=row['revision'],confirmed=True)
   self.assertEqual(400,self.request('cas-retire&personal=1',data,device='b'*64).status_code)
   os.utime(folder,None);self.assertEqual(400,self.request('cas-retire&personal=1',data).status_code);self.assertTrue(folder.exists())
+
+class OfflineBackupSelection(unittest.TestCase):
+ def test_configured_copies_excluded_by_default_and_optional(self):
+  with tempfile.TemporaryDirectory() as tmp:
+   root=Path(tmp);(root/'etc').mkdir();(root/'etc/passwd').write_text('alice:x:1001:1001::/home/alice:/bin/bash\n')
+   config=root/'home/alice/.config/server-manager-client/offline/folders.json';config.parent.mkdir(parents=True)
+   config.write_text(json.dumps([{'local':'/srv/offline/documents'}]))
+   copy=root/'srv/offline/documents/file';copy.parent.mkdir(parents=True);copy.write_text('offline');(root/'srv/ordinary').write_text('ordinary')
+   rows=[dict(target='/',fstype='ext4')]
+   names=list(system_stream.file_names(root,{'component':'system'},rows))
+   self.assertNotIn('./srv/offline/documents/file',names);self.assertIn('./srv/ordinary',names)
+   names=list(system_stream.file_names(root,{'component':'system','include_offline':True},rows))
+   self.assertIn('./srv/offline/documents/file',names)
+   rows.append(dict(target='/srv/offline',fstype='ext4'))
+   names=list(system_stream.file_names(root,{'component':'system','include_offline':True},rows))
+   self.assertNotIn('./srv/offline/documents/file',names)

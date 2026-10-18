@@ -57,6 +57,18 @@ class Incremental(unittest.TestCase):
   with patch.object(client_api,'guard',return_value={'enabled':True,'quota_gib':0}):
    self.assertEqual(400,self.req('block-put&id='+sid+'&hash='+sha,'post',data=data).status_code)
 
+ def test_content_defined_snapshot_server_roundtrip(self):
+  data=self.zip(os.urandom(8*backup.CHUNK+123))
+  def send(payload):
+   sid=self.client_call('cas-begin',{})['id']
+   stream=incremental.Stream(sid,lambda _:None,call=self.client_call,content_defined=True)
+   stream.write(payload);stream.finish()
+   response=self.req('download&id='+sid);self.assertEqual(payload,response.data);response.close()
+   return stream
+  send(data)
+  modified=self.zip(data[200:1000]+b'inserted'*73+data[1000:])
+  second=send(modified);self.assertGreater(second.reused,len(data)*.6)
+
 class Components(unittest.TestCase):
  def test_real_tar_is_repeatable_and_preserves_hidden_files_links(self):
   with tempfile.TemporaryDirectory() as tmp:

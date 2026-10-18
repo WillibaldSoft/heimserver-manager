@@ -43,11 +43,26 @@ def lock():
         try:yield
         finally:fcntl.flock(stream,fcntl.LOCK_UN)
 
+def update_lock_held():
+    # Read the kernel lock table: acquiring a probe lock can reject a real update.
+    try:info=(ROOT/'update.lock').stat()
+    except FileNotFoundError:return False
+    device=(os.major(info.st_dev),os.minor(info.st_dev),info.st_ino)
+    for line in Path('/proc/locks').read_text().splitlines():
+        fields=line.split()
+        if len(fields)<6 or fields[1]!='FLOCK':continue
+        try:
+            major,minor,inode=fields[5].split(':')
+            candidate=(int(major,16),int(minor,16),int(inode))
+        except (ValueError,IndexError):continue
+        if candidate==device:return True
+    return False
+
+
 def get_blockers(ctx=None):
-    if not (ROOT/'update.lock').exists():return []
-    try:
-        with lock():return []
-    except UpdateError:return [dict(source='Apps',type='open-webui-update',title='Open WebUI wird aktualisiert',reason='Datensicherung, Containerwechsel oder Rückkehr zum bisherigen Stand',priority=95,url='/apps/open_webui/update')]
+    if not update_lock_held():return []
+    return [dict(source='Apps',type='open-webui-update',title='Open WebUI wird aktualisiert',reason='Datensicherung, Containerwechsel oder Rückkehr zum bisherigen Stand',priority=95,url='/apps/open_webui/update')]
+
 
 def bundled(container):
     image=container.get('Config',{}).get('Image','')

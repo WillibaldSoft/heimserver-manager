@@ -13,6 +13,7 @@ try:
     from gi.repository import AyatanaAppIndicator3 as Indicator
 except (ImportError,ValueError):Indicator=None
 import core
+from system_recovery_ui import configure_scroll,fit_window,install_scroll_style
 try:
     from client_version import VERSION
 except ImportError:
@@ -27,7 +28,7 @@ class App(Gtk.Application):
         super().__init__(application_id='org.heimservermanager.Client',flags=Gio.ApplicationFlags.HANDLES_COMMAND_LINE)
         self.window=None;self.entries={};self.busy=False;self.polling=False;self.indicator=None;self.connecting=False;self.connected=False
     def do_startup(self):
-        Gtk.Application.do_startup(self);self.hold()
+        Gtk.Application.do_startup(self);install_scroll_style();self.hold()
         import offline
         offline.resume()
         self.make_window();self.make_tray();
@@ -44,19 +45,24 @@ class App(Gtk.Application):
         dialog=Gtk.MessageDialog(transient_for=self.window,modal=True,message_type=Gtk.MessageType.ERROR if error else Gtk.MessageType.INFO,buttons=Gtk.ButtonsType.OK,text=text)
         dialog.run();dialog.destroy()
     def make_window(self):
-        self.window=Gtk.ApplicationWindow(application=self,title=tr('Heimserver Manager Client · ')+VERSION);self.window.set_default_size(680,700)
+        self.window=Gtk.ApplicationWindow(application=self,title=tr('Heimserver Manager Client · ')+VERSION);fit_window(self.window,760,520)
         self.window.connect('delete-event',self.close_window)
         outer=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=10,margin=16);self.window.add(outer)
-        outer.pack_start(Gtk.Label(label=tr('Heimserver Manager Client · Version ')+VERSION,xalign=0),False,False,0)
         self.state=Gtk.Label(label=tr('Status wird geprüft …'),xalign=0);self.state.set_line_wrap(True);outer.pack_start(self.state,False,False,0)
-        self.notice=Gtk.Label(label=tr('Dienst arbeitet nach Aktivierung in deiner Benutzersitzung. Fenster schließen beendet den Agenten nicht.'),xalign=0);self.notice.set_line_wrap(True);outer.pack_start(self.notice,False,False,0)
+        self.notice=Gtk.Label(label=tr('Dienst arbeitet nach Aktivierung in deiner Benutzersitzung. Fenster schließen beendet den Agenten nicht.'),xalign=0,yalign=0)
+        self.notice.set_line_wrap(True);self.notice.set_selectable(True);self.notice.set_max_width_chars(80)
+        notice_scroll=Gtk.ScrolledWindow();configure_scroll(notice_scroll)
+        notice_scroll.set_min_content_height(90);notice_scroll.set_max_content_height(120)
+        notice_scroll.set_propagate_natural_height(False);notice_scroll.set_size_request(-1,110)
+        notice_scroll.add(self.notice);outer.pack_start(notice_scroll,False,False,0)
         actions=Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE,max_children_per_line=3);outer.pack_start(actions,False,False,0)
         for label,action in [(tr('Server wecken'),'wake'),(tr('Server benötigt'),'need'),(tr('Server freigeben'),'release'),(tr('Wecken und verbinden'),'connect'),(tr('Zugriff vorbereiten'),'access')]:
             button=Gtk.Button(label=label);button.connect('clicked',lambda _,a=action:self.release_server() if a=='release' else self.run_action(lambda:core.action(a),connecting=True));actions.add(button)
         note=Gtk.Label(label=tr('„Server freigeben“ pausiert den Serverbedarf und Offline-Abgleich bis zum nächsten Client-Start oder einer manuellen Umschaltung. „Zugriff vorbereiten“ weckt und wartet auf den Server. Dateizugriff wird nicht automatisch überwacht.'),xalign=0);note.set_line_wrap(True);outer.pack_start(note,False,False,0)
-        scroll=Gtk.ScrolledWindow();scroll.set_policy(Gtk.PolicyType.NEVER,Gtk.PolicyType.AUTOMATIC);outer.pack_start(scroll,True,True,0)
-        setup=Gtk.Expander(label=tr('Anmeldung & Einrichtung'));setup.set_expanded(not core.CONFIG.exists());scroll.add(setup)
-        setup_box=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=10);setup.add(setup_box)
+        scroll=Gtk.ScrolledWindow();configure_scroll(scroll)
+        scroll.set_min_content_height(280);scroll.set_max_content_height(500);scroll.set_propagate_natural_height(True)
+        setup=Gtk.Expander(label=tr('Anmeldung & Einrichtung'));setup.set_expanded(not core.CONFIG.exists());setup.add(scroll)
+        setup_box=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=10);scroll.add(setup_box)
         grid=Gtk.Grid(column_spacing=12,row_spacing=8);setup_box.pack_start(grid,False,False,0)
         for i,key in enumerate(core.KEYS):
             label=Gtk.Label(label=LABELS.get(key,tr('Betriebsmodus') if key=='CLIENT_MODE' else tr('Weckmethode')),xalign=0);grid.attach(label,0,i,1,1)
@@ -78,6 +84,46 @@ class App(Gtk.Application):
             btn=Gtk.Button(label=label);btn.connect('clicked',lambda _,cb=callback:cb());setup_buttons.add(btn)
         for label,callback in [(tr('Offline-Dateien'),lambda:offline_ui.show(self)),(tr('Eigene Backups / Wiederherstellung'),lambda:extras_ui.backups(self)),(tr('Server-Backup (Administrator)'),lambda:extras_ui.server(self)),(tr('Protokoll'),self.show_logs),(tr('Aktualisieren'),lambda:self.refresh())]:
             btn=Gtk.Button(label=label);btn.connect('clicked',lambda _,cb=callback:cb());buttons.add(btn)
+        outer.pack_start(setup,False,False,0)
+        footer=Gtk.Box(spacing=6)
+        footer.pack_start(Gtk.Label(label=tr('Software herunterladen:'),xalign=0),False,False,0)
+        self.download_link=Gtk.LinkButton.new_with_label('https://Server:8443/clients/setup','https://Server:8443/clients/setup')
+        self.download_link.set_halign(Gtk.Align.START)
+        footer.pack_start(self.download_link,False,False,0)
+        outer.pack_end(footer,False,False,0)
+        def update_download_link(*_):
+            from urllib.parse import urlsplit,urlunsplit
+            raw=self.entries['SERVER_URL'].get_text().strip()
+            try:
+                url=urlsplit(raw)
+                valid=url.scheme in ('http','https') and bool(url.hostname) and url.port != 0 and not url.username and not url.password
+                target=urlunsplit((url.scheme,url.netloc,url.path.rstrip('/')+'/clients/setup','','')) if valid else ''
+            except ValueError:target=''
+            self.download_link.set_uri(target or 'https://Server:8443/clients/setup')
+            self.download_link.set_label(target or 'https://Server:8443/clients/setup')
+            self.download_link.set_sensitive(bool(target))
+            self.download_link.set_tooltip_text(target or tr('Zuerst die Manager-Adresse eintragen.'))
+        self.entries['SERVER_URL'].connect('changed',update_download_link)
+        update_download_link()
+        def resize_setup(*_):
+            fit_window(self.window,760,900 if setup.get_expanded() else 520)
+            display=self.window.get_display();monitor=display.get_monitor_at_window(self.window.get_window()) if self.window.get_window() else display.get_primary_monitor()
+            area=monitor.get_workarea() if monitor else None
+            self.window.resize(min(760,area.width-40) if area else 760,min(900 if setup.get_expanded() else 520,area.height-60) if area else 520)
+        setup.connect('notify::expanded',resize_setup)
+        progress_seen=[False]
+        def show_sync_progress():
+            import json,offline
+            try:
+                data=json.loads((offline.ROOT/'progress.json').read_text())
+                if data.get('state')=='running' and not self.busy:
+                    os.kill(int(data['pid']),0)
+                    self.notice.set_text(data.get('folder','')+' · '+data.get('detail',''));progress_seen[0]=True
+                elif data.get('state') in ('finished','failed') and progress_seen[0] and not self.busy:
+                    self.notice.set_text(data.get('folder','')+' · '+data.get('detail',''));progress_seen[0]=False
+            except (OSError,ValueError,KeyError):pass
+            return True
+        GLib.timeout_add_seconds(1,show_sync_progress)
         try:self.fill(core.load())
         except Exception:self.fill(core.DEFAULTS);self.notice.set_text(tr('Bestehende Konfiguration konnte nicht gelesen werden. JSON-Profil importieren; bisherige Dateien bleiben unverändert.'))
     def change_hostname(self):
@@ -158,8 +204,8 @@ class App(Gtk.Application):
         threading.Thread(target=worker,daemon=True).start();return True
     def show_logs(self):
         def show(text):
-            dialog=Gtk.Dialog(title=tr('Agenten-Protokoll'),transient_for=self.window);dialog.add_button(tr('Schließen'),Gtk.ResponseType.CLOSE);dialog.set_default_size(720,400)
-            scroll=Gtk.ScrolledWindow();view=Gtk.TextView(editable=False,monospace=True);view.get_buffer().set_text(text);scroll.add(view);dialog.get_content_area().pack_start(scroll,True,True,0);dialog.show_all();dialog.run();dialog.destroy();return False
+            dialog=Gtk.Dialog(title=tr('Agenten-Protokoll'),transient_for=self.window);dialog.add_button(tr('Schließen'),Gtk.ResponseType.CLOSE);fit_window(dialog,760,900)
+            scroll=Gtk.ScrolledWindow();configure_scroll(scroll);view=Gtk.TextView(editable=False,monospace=True);view.get_buffer().set_text(text);scroll.add(view);dialog.get_content_area().pack_start(scroll,True,True,0);dialog.show_all();dialog.run();dialog.destroy();return False
         def worker():
             try:text=core.logs()
             except Exception:text=tr('Protokoll nicht verfügbar.')

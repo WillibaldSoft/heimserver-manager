@@ -2688,6 +2688,8 @@ def register(app, ctx):
             body += f'{_ui_html('<p><b>')}{ctx.esc(_ui_text(msg))}{_ui_html('</b></p>')}'
         body += _ui_html("<p><a class='btn' href='/heimnetz'>Aus Heimnetz übernehmen</a></p></div>")
         body += _ui_html("<div class='card'><h3>Client-App herunterladen</h3><p><a class='btn' href='/clients/setup'>Persönliche Einrichtung mit Anmeldung</a></p><p>Programme und persönliches JSON-Profil werden zentral über <code>/clients/setup</code> heruntergeladen. Diesen Link auf dem jeweiligen Client öffnen und mit dessen Manager-Benutzer anmelden. Bei neuer Einrichtung entsteht der Geräteeintrag automatisch.</p><a class='btn' href='/clients/recovery/download'>Systemwiederherstellung für Live-USB herunterladen</a><p>Portables ZIP mit Skripten und Anleitung für ein gestartetes Linux-Live-System; kein bootfähiges ISO. Vollständige Rücksicherung benötigt ein vorbereitetes Linux-Zielsystem und Administratorrechte. Enthält keine Zugangsdaten.</p></div>")
+        from modules.heimnetz_extra.client_download_links import card as download_addresses
+        body += download_addresses()
         body += client_agent_help_box()
 
         body += _ui_html("<div class='card'><table><tr><th>Status</th><th>Name</th><th>Modus</th><th>Server benötigt</th><th>IP</th><th>MAC</th><th>Letzter Kontakt</th><th>Aktion</th></tr>")

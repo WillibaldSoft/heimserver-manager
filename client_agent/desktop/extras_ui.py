@@ -1,3 +1,4 @@
+from system_recovery_ui import configure_scroll,fit_window,install_scroll_style
 """Desktop dialogs for own backups and explicit TLS enrolment."""
 try:
     from client_i18n import tr
@@ -71,10 +72,15 @@ def pair_device(app):
     app.run_action(run)
 
 def backups(app):
-    d=Gtk.Dialog(title=tr('Eigene Client-Sicherungen'),transient_for=app.window);d.set_default_size(650,400);d.add_button(tr('Schließen'),Gtk.ResponseType.CLOSE)
-    box=d.get_content_area();box.set_spacing(10)
+    d=Gtk.Dialog(title=tr('Eigene Client-Sicherungen'),transient_for=app.window);fit_window(d,760,900);d.add_button(tr('Schließen'),Gtk.ResponseType.CLOSE)
+    from system_recovery_ui import configure_scroll
+    page=Gtk.ScrolledWindow();configure_scroll(page);page.set_vexpand(True);d.get_content_area().add(page)
+    box=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=10);box.set_border_width(12);page.add(box)
     note=Gtk.Label(label=tr('Standard ist die vollständige Linux-Systemsicherung. Home oder einzelne Ordner lassen sich alternativ als Dateisicherung auswählen; diese enthalten keine Programme und keine Systemkonfiguration. Zusätzliche Datenplatten und Serverfreigaben nur ausdrücklich auswählen.'),wrap=True);box.add(note)
-    box.add(Gtk.Label(label=(tr('Manager-Konto: ')+backup.ACCOUNT[2]['username']) if backup.ACCOUNT else tr('Bisheriges Agenten-Profil (Token)'),wrap=True))
+    account=Gtk.Label(wrap=True,xalign=0);box.add(account)
+    def update_account():
+        account.set_text(tr('Manager-Konto: ')+backup.ACCOUNT[2]['username'] if backup.ACCOUNT else tr('Bisheriges Agenten-Profil (Token)'))
+    update_account()
     scope=Gtk.ComboBoxText()
     scope.append('system',tr('Vollständiges Linux-System (Standard)'));scope.append('folder',tr('Ausgewählten Ordner sichern'));scope.append('home',tr('Eigenes Home einschließlich versteckter Einstellungen sichern'));scope.set_active(0);box.add(scope)
     destination=Gtk.ComboBoxText();destination.append('server',tr('Direkt auf den Server'));destination.append('usb',tr('Direkt auf USB-Festplatte'));destination.set_active(0);box.add(destination)
@@ -112,7 +118,11 @@ def backups(app):
         if app.busy:app.message(tr('Zuerst die laufende Aktion abschließen.'));return
         backup.account_logout();d.response(Gtk.ResponseType.CLOSE)
     def create():
-        if scope.get_active_id()=='system':system_recovery(app);return
+        if scope.get_active_id()=='system':
+            d.hide()
+            try:system_recovery(app)
+            finally:d.show();update_account();GLib.timeout_add(250,cancel_state)
+            return
         src=str(Path.home()) if scope.get_active_id()=='home' else folder(d,tr('Benutzerordner sichern'))
         dest=folder(d,tr('Zielordner auf eingehängter USB-Festplatte')) if src and destination.get_active_id()=='usb' else None
         if destination.get_active_id()=='usb' and not dest:return
@@ -137,14 +147,28 @@ def backups(app):
         selection=selected.get_text()
         if confirm(app,tr('In neuen Ordner wiederherstellen: ')+str(target)+'?'):
             app.run_action(lambda:backup.restore(item,target,progress,selected=selection))
-    for label,fn in [(tr('Am Manager anmelden'),lambda:manager_login(app)),(tr('Manager abmelden'),logout),(tr('Benutzer & Gerät koppeln'),lambda:pair_device(app)),(tr('Sicherung starten'),create),(tr('System sichern & wiederherstellen (Linux)'),lambda:system_recovery(app)),(tr('Sicherungsstände aktualisieren'),refresh),(tr('Server-Stand wiederherstellen'),restore),(tr('USB-Stand wiederherstellen'),lambda:restore(True)),(tr('Unvollständige Übertragung verwerfen'),lambda: app.run_action(lambda: str(backup.call('cancel',{}))) if confirm(app,tr('Nur die unvollständige Übertragung dieses Clients verwerfen?')) else None)]:
-        b=Gtk.Button(label=label);b.connect('clicked',lambda _,f=fn:f());box.add(b)
+    def delete_snapshot():
+        item=items.get(choice.get_active_id())
+        if not item:app.message(tr('Zuerst einen Sicherungsstand auswählen.'));return
+        if not backup.ACCOUNT:app.message(tr('Zum Löschen am Manager anmelden.'));return
+        if not confirm(app,tr('Ausgewählten Sicherungsstand endgültig löschen? Gemeinsam verwendete Datenblöcke bleiben erhalten.')+'\n\n'+backup.snapshot_label(item)):return
+        def remove():
+            if 'delete-snapshot-v1' not in backup.call('list').get('capabilities',[]):raise core.Error(tr('Manager für das Löschen von Sicherungsständen aktualisieren.'))
+            backup.call('delete',dict(confirmed=True),query=backup.download_query(item))
+            return tr('Sicherungsstand gelöscht.')
+        app.run_action(remove,on_success=refresh)
+    account_options=Gtk.Expander(label=tr('Anmeldung und Gerätezuordnung'));account_box=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=8);account_options.add(account_box);box.pack_start(account_options,False,False,0)
+    for label,fn in [(tr('Am Manager anmelden'),lambda:manager_login(app,on_success=update_account)),(tr('Manager abmelden'),logout),(tr('Benutzer & Gerät koppeln'),lambda:pair_device(app)),(tr('Sicherung starten'),create),(tr('Sicherungsstände aktualisieren'),refresh),(tr('Server-Stand wiederherstellen'),restore),(tr('Ausgewählten Server-Stand löschen'),delete_snapshot),(tr('USB-Stand wiederherstellen'),lambda:restore(True)),(tr('Unvollständige Übertragung verwerfen'),lambda: app.run_action(lambda: str(backup.call('cancel',{}))) if confirm(app,tr('Nur die unvollständige Übertragung dieses Clients verwerfen?')) else None)]:
+        b=Gtk.Button(label=label);b.connect('clicked',lambda _,f=fn:f())
+        (account_box if label in (tr('Am Manager anmelden'),tr('Manager abmelden'),tr('Benutzer & Gerät koppeln')) else box).pack_start(b,False,False,0)
+    for child in box.get_children():
+        if isinstance(child,Gtk.Label):child.set_max_width_chars(65);child.set_xalign(0)
     d.show_all();status.set_text(tr("Server-Stände bei Bedarf aktualisieren; USB-Sicherung funktioniert auch ohne Serververbindung."));d.run();d.destroy()
 
 def https(app):
     data=connection.load()
     if not data:app.message(tr('Zuerst privates HTTPS im Manager einrichten und ein neues JSON-Client-Profil importieren. Dieses enthält das öffentliche Stammzertifikat und den Fingerabdruck.'));return
-    d=Gtk.Dialog(title=tr('Privates HTTPS einrichten'),transient_for=app.window);d.add_button(tr('Schließen'),Gtk.ResponseType.CLOSE);d.set_default_size(650,360)
+    d=Gtk.Dialog(title=tr('Privates HTTPS einrichten'),transient_for=app.window);d.add_button(tr('Schließen'),Gtk.ResponseType.CLOSE);fit_window(d,760,620)
     box=d.get_content_area();box.set_spacing(10)
     box.add(Gtk.Label(label=tr('Hostname: ')+data['hostname']+'\nSHA-256: '+data['sha256']+tr('\nFingerabdruck mit Einstellungen → HTTPS-Zugang im Manager vergleichen. Import erteilt diesem Stammzertifikat Vertrauen.'),wrap=True,selectable=True))
     box.add(Gtk.Label(label=tr('Optional feste Server-IP für hosts. Leer lassen, wenn der Router den Namen bereits auflöst.'),wrap=True))

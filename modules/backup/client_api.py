@@ -97,8 +97,8 @@ def abort_one(root,sid):
     with locked(root):
         if direct(root/sid).is_dir():return dict(ok=True,completed=True)
         if folder.is_dir():shutil.rmtree(folder)
-        chunks.collect_unused(root,sys.modules[__name__])
-        return dict(ok=True,aborted=True)
+        # Keep uploaded blocks so a cancelled run can reuse them on restart.
+        return dict(ok=True,aborted=True,blocks_retained=True)
 
 def register(app,ctx):
     @app.get('/api/account/access')
@@ -161,9 +161,37 @@ def register(app,ctx):
             if pc:
                 if not shared_pc.admin():return jsonify(error='Gemeinsamer Systemstand: Manager-Administrator oder Benutzer mit Systemsicherungsfreigabe anmelden.'),403
                 root=shared_pc.root(sys.modules[__name__],pc)
-                if action not in ('list','download','cancel','abort','cas-begin','cas-finish','cas-finalize','cas-status','cas-pending','cas-retire','block-has','block-put'):raise ValueError('Unbekannte PC-Sicherungsaktion.')
+                if action not in ('list','download','delete','cancel','abort','cas-begin','cas-finish','cas-finalize','cas-status','cas-pending','cas-retire','block-has','block-put'):raise ValueError('Unbekannte PC-Sicherungsaktion.')
             if action=='pc-status' and request.method=='GET':return jsonify(shared_pc.status(sys.modules[__name__],ctx,agent))
+            if action=='cas-begin':
+                catalog=locked(direct(root.parent));catalog.__enter__()
+                @after_this_request
+                def release_catalog(response):
+                    catalog.__exit__(None,None,None)
+                    return response
             g.backup_component=shared_pc.metadata(sys.modules[__name__],ctx,agent,pc) if action=='cas-begin' else {}
+            if action=='delete' and request.method=='POST':
+                if request.path!='/api/account/backup':return jsonify(error='Manager-Anmeldung zum Löschen erforderlich.'),403
+                if (request.get_json(silent=True) or {}).get('confirmed') is not True:raise ValueError('Löschen ausdrücklich bestätigen.')
+                aid=int(request.args.get('source_agent','0'))
+                if aid:
+                    if pc:raise ValueError('Ungültige Sicherungsquelle.')
+                    sources=account_sources(ctx,g.auth_principal,root)
+                    if aid not in sources:raise ValueError('Diese Sicherung gehört nicht zu deinem Konto.')
+                    root=sources[aid][0]
+                sid=identifier(request.args.get('id'))
+                # Keep reference checks and new manifests mutually exclusive.
+                with locked(direct(root.parent)),locked(root):
+                    if list(root.glob('.upload-*')):raise ValueError('Zuerst laufende oder unvollständige Sicherung abschließen.')
+                    folder=direct(root/sid);m=json.loads(direct(folder/'manifest.json').read_text())
+                    if m.get('component')=='system':
+                        for reference in root.parent.glob('*/*/manifest.json'):
+                            if reference==folder/'manifest.json':continue
+                            data=json.loads(direct(reference).read_text())
+                            if data.get('system_id')==sid:raise ValueError('Systemstand wird von persönlichen Sicherungen benötigt. Diese zuerst löschen.')
+                    shutil.rmtree(folder)
+                    removed=chunks.collect_unused(root,sys.modules[__name__])
+                    return jsonify(ok=True,deleted=sid,unused_blocks_removed=removed)
             if action=='abort' and request.method=='POST':return jsonify(abort_one(root,identifier(request.args.get('id'))))
             if action.startswith(('cas-','block-')):return chunks.handle(root,action,quota,sys.modules[__name__])
             if request.method=='GET':
@@ -174,7 +202,7 @@ def register(app,ctx):
                         rows.extend(dict(row,source_agent=aid,source_label=row.get('source_host') or label) for row in listing(location))
                     if not pc:rows.extend(shared_pc.visible(sys.modules[__name__]))
                     else:rows=[dict(row,shared_pc=pc) for row in rows]
-                    return jsonify(backups=sorted(rows,key=lambda r:r['created'],reverse=True),quota_bytes=quota,scope='own-account' if request.path=='/api/account/backup' else 'own-client',capabilities=['stream-zip-v1','system-cas-v1','own-pc-restore-v1','shared-pc-v1','backup-session-v1','async-finalize-v1','retire-incomplete-v1'])
+                    return jsonify(backups=sorted(rows,key=lambda r:r['created'],reverse=True),quota_bytes=quota,scope='own-account' if request.path=='/api/account/backup' else 'own-client',capabilities=['stream-zip-v1','system-cas-v1','own-pc-restore-v1','shared-pc-v1','backup-session-v1','async-finalize-v1','retire-incomplete-v1','delete-snapshot-v1'])
                 if action=='download':
                     aid=int(request.args.get('source_agent','0'))
                     if pc and aid:raise ValueError('Ungültige gemeinsame Sicherungsquelle.')
@@ -183,11 +211,19 @@ def register(app,ctx):
                         sources=account_sources(ctx,g.auth_principal,root)
                         if aid not in sources:raise ValueError('Diese Sicherung gehört nicht zu deinem Konto.')
                         root=sources[aid][0]
-                    sid=identifier(request.args.get('id'));folder=direct(root/sid)
-                    m=json.loads(direct(folder/'manifest.json').read_text())
-                    if m.get('format')==chunks.FORMAT:return chunks.download(root,m,sys.modules[__name__])
-                    response=send_file(direct(folder/'files.zip'),as_attachment=True,download_name='Client-'+sid+'.zip',conditional=True)
-                    response.headers['X-Backup-SHA256']=m['sha256'];return response
+                    # Retain the root lock until download closes: deletion/GC must wait.
+                    download_lock=locked(root);download_lock.__enter__()
+                    try:
+                        sid=identifier(request.args.get('id'));folder=direct(root/sid)
+                        m=json.loads(direct(folder/'manifest.json').read_text())
+                        if m.get('format')==chunks.FORMAT:response=chunks.download(root,m,sys.modules[__name__])
+                        else:
+                            response=send_file(direct(folder/'files.zip'),as_attachment=True,download_name='Client-'+sid+'.zip',conditional=True)
+                            response.headers['X-Backup-SHA256']=m['sha256']
+                        response.call_on_close(lambda:download_lock.__exit__(None,None,None))
+                        return response
+                    except Exception:
+                        download_lock.__exit__(None,None,None);raise
                 raise ValueError('Unbekannte Aktion.')
             with locked(root):
                 # Interrupted uploads remain resumable for 24h, then are removed.

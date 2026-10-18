@@ -161,3 +161,11 @@ Restart the client after changing the desktop language. Browser language and
 JSON profiles do not override this setting. Install the new client release;
 existing settings are preserved. Names, paths, technical logs and external
 program output (including the USB/NFS migration script) remain unchanged.
+
+0.13-6 – 18. Oktober 2026 – Beta
+- Linux-Client 0.4.39: verständliche Meldung bei laufender Synchronisation; gemeinsamer Live-Fortschritt automatischer und manueller Abgleiche. Anmeldung & Einrichtung unten, eingeklappt ohne reservierte Leerfläche; kompaktes Hauptfenster.
+- SMB-Löschungen behalten die Originaldatei durch Umbenennen innerhalb der Freigabe als Rückholkopie. Eigentümer und Rechte bleiben erhalten; keine Umgehung der Samba-Rechte. Änderungen bestehender Dateien verwenden weiterhin die bisherige ACL-geprüfte Rückholkopie und können bei fehlenden Rechten scheitern.
+- Update-Läufe aktualisieren Status und Ergebnis automatisch; Abschlussprüfungen aktualisieren den App-Kartenstatus. Sicherungsvorbereitung fragt nach einem Verbindungsabbruch weiter nach dem Ergebnis, ohne erneut zu starten.
+- Laufende App-Updateprüfungen blockieren automatisches Ausschalten; verwaiste Prüfungen nach Manager-Neustart werden erkannt. Open-WebUI-Blocker prüfen Sperren ohne konkurrierende Sperranforderung.
+- Direkter Manager-Neustart unter Einstellungen mit bestehender Auftragsprüfung. Sichtbare, kopierbare Client-Download-Adressen mit weiterhin erforderlicher Anmeldung.
+- Windows-Client 0.2.12 aus aktuellem Quellstand neu gebaut; weiterhin experimentell. Die neuen GTK-Fenster- und Linux-SMB-Korrekturen sind Linux-spezifisch. Kein nativer Windows-Laufzeittest für diesen Release.

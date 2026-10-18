@@ -158,14 +158,30 @@ def mutate(fd,path,expected,stream,size,delete=False,content_sha=None,file_mode=
             if not delete and content_sha is not None and fingerprint(p,tmp)['sha']!=content_sha:raise ValueError('Upload checksum mismatch')
             if fingerprint(p,n)!=current:raise FileExistsError('Conflict: server file changed')
             if current:
-                # Revision is retained next to its source, inaccessible through this API.
-                history='.hsm-history-'+time.strftime('%Y%m%d-%H%M%S')+'-'+uuid.uuid4().hex+'-'+n[:60]
-                with os.fdopen(os.open(n,os.O_RDONLY|os.O_NOFOLLOW,dir_fd=p),'rb') as src:
-                    h=os.open(history,os.O_CREAT|os.O_EXCL|os.O_WRONLY|os.O_NOFOLLOW,0o600,dir_fd=p)
-                    with os.fdopen(h,'wb') as dst:shutil.copyfileobj(src,dst);dst.flush();os.fsync(dst.fileno())
-                if fingerprint(p,n)!=current:raise FileExistsError('Conflict: file changed while retaining revision')
-            if delete:os.unlink(n,dir_fd=p)
-            else:os.replace(tmp,n,src_dir_fd=p,dst_dir_fd=p)
+                # Move the original inode: keep owner, mode and every ACL/xattr.
+                # Use a dedicated timestamp directory so full filenames fit.
+                try:os.mkdir('.hsm-history',directory_mode,dir_fd=p)
+                except FileExistsError:pass
+                history_fd=os.open('.hsm-history',os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW,dir_fd=p)
+                try:
+                    if mount_id(history_fd)!=mount_id(p):raise ValueError('Unsafe history mount')
+                    stamp=time.strftime('%Y%m%dT%H%M%SZ',time.gmtime())+'-'+uuid.uuid4().hex
+                    os.mkdir(stamp,directory_mode,dir_fd=history_fd)
+                    entry=os.open(stamp,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW,dir_fd=history_fd)
+                    try:
+                        os.rename(n,n,src_dir_fd=p,dst_dir_fd=entry)
+                        try:
+                            if not delete:os.replace(tmp,n,src_dir_fd=p,dst_dir_fd=p)
+                        except Exception:
+                            # Restore only if nothing has appeared at the original path.
+                            try:os.stat(n,dir_fd=p,follow_symlinks=False)
+                            except FileNotFoundError:os.rename(n,n,src_dir_fd=entry,dst_dir_fd=p)
+                            raise
+                        os.fsync(entry)
+                    finally:os.close(entry)
+                    os.fsync(history_fd)
+                finally:os.close(history_fd)
+            elif not delete:os.replace(tmp,n,src_dir_fd=p,dst_dir_fd=p)
             os.fsync(p)
         finally:
             try:os.unlink(tmp,dir_fd=p)

@@ -75,6 +75,7 @@ def create_component(progress,options,call,name,system_id="",inventory=None,on_b
     if inventory is None:inventory=prepare_inventory(progress,options)
     progress(tr('Enthaltene Datenträger: ')+', '.join(r['target'] for r in inventory.get('selected_mounts',[])))
     progress(tr('Ausgeschlossene Datenträger: ')+', '.join(r['target'] for r in inventory.get('excluded_mounts',[])))
+    for path in inventory.get('excluded_offline_paths',[]):progress(tr('Offline-Kopie nicht mitgesichert: ')+path)
     backup.check_cancel()
     if 'retire-incomplete-v1' in capabilities:
         for row in call('cas-pending')['uploads']:
@@ -82,7 +83,7 @@ def create_component(progress,options,call,name,system_id="",inventory=None,on_b
             if confirm_interrupted is None or not confirm_interrupted(row):raise core.Error(tr('Neustart nicht bestätigt. Vorhandener Auftrag bleibt erhalten.'))
             call('cas-retire',dict(id=row['id'],revision=row['revision'],confirmed=True))
             progress(tr('Unvollständiger Auftrag zurückgelegt; Datenblöcke bleiben erhalten.'))
-    sid=call('cas-begin',dict(name=name,system_id=system_id,personal_user=inventory.get('personal_user',''),personal_home=inventory.get('personal_home','')))['id']
+    sid=call('cas-begin',dict(name=name,chunking='content-defined-v1',system_id=system_id,personal_user=inventory.get('personal_user',''),personal_home=inventory.get('personal_home','')))['id']
     process=subprocess.Popen(prefix+[helper,'backup',choice],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
     job=backup.CURRENT_BACKUP;stop=lambda:cancel_helper(process)
     if job:
@@ -93,7 +94,7 @@ def create_component(progress,options,call,name,system_id="",inventory=None,on_b
     def drain():
         for line in iter(process.stderr.readline,b''):
             errors.append(line.decode(errors='replace').strip());del errors[:-20]
-    reader=threading.Thread(target=drain,daemon=True);reader.start();stream=Stream(sid,progress,call=call,check=backup.check_cancel,on_bytes=on_bytes,async_finish='async-finalize-v1' in capabilities)
+    reader=threading.Thread(target=drain,daemon=True);reader.start();stream=Stream(sid,progress,call=call,check=backup.check_cancel,on_bytes=on_bytes,async_finish='async-finalize-v1' in capabilities,content_defined=True)
     try:
         with zipfile.ZipFile(stream,'w',zipfile.ZIP_STORED,allowZip64=True) as archive:
             entry=zipfile.ZipInfo('files/system.tar',(1980,1,1,0,0,0))
@@ -137,7 +138,7 @@ def create(progress=lambda text:None,options=None,confirm_exclusions=None,confir
         raise core.Error(tr('Manager benötigt die Erweiterung für gemeinsame PC-Sicherungen.'))
     status=backup.call('pc-status');system=status.get('system');messages=[]
     refresh=bool(options.pop('refresh_system',False))
-    if system and not refresh and (options.get('extra_mounts') or options.get('network_profiles')):
+    if system and not refresh and (options.get('extra_mounts') or options.get('network_profiles') or options.get('include_offline')):
         raise core.Error(tr('Zusätzliche Datenträger oder Netzwerkprofile gewählt: gemeinsamen PC-Systemstand ausdrücklich neu sichern.'))
     if status.get('personal'):progress(tr('Vorhandene persönliche Sicherung prüfen: ')+status['personal']['created'])
     if refresh and not status['system_admin']:

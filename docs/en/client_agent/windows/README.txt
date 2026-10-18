@@ -127,3 +127,11 @@ Restart the client after changing the desktop language. Browser language and
 JSON profiles do not override this setting. Install the new client release;
 exiting settings are preserved. Names, paths, technical logs and external
 program output (including the USB/NFS migration script) remain unchanged.
+
+0.13-6 – October 18, 2026 – Beta
+- Linux client 0.4.39: clear message when synchronization is already running; shared live progress for automatic and manual sync. Sign-in & setup appears at the bottom, with no reserved blank space while collapsed; compact main window.
+- SMB deletions retain the original file by renaming it within the share. Ownership and permissions remain intact; Samba rights are not bypassed. Updates to existing files still use the previous ACL-checked recovery-copy method and may fail when permissions are insufficient.
+- Update runs refresh status and results automatically; completion checks refresh app cards. Backup preparation continues polling after a connection failure without starting another job.
+- Running app update checks prevent automatic shutdown; interrupted checks are detected after a manager restart. Open WebUI blockers observe locks without competing for them.
+- Direct manager restart under Settings retains existing job checks. Visible, copyable client download addresses still require sign-in.
+- Windows client 0.2.12 rebuilt from current source; remains experimental. The new GTK layout and Linux SMB fixes are Linux-specific. No native Windows runtime test for this release.

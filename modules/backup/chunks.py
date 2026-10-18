@@ -63,7 +63,7 @@ def handle(root,action,quota,api):
             if len(api.listing(root))>=500:raise ValueError('Maximal 500 Sicherungsstände erreicht.')
             sid=uuid.uuid4().hex;folder=root/('.upload-'+sid);folder.mkdir(mode=0o700)
             data=request.get_json() or {}
-            api.save(folder/'manifest.json',dict(id=sid,format=FORMAT,created=datetime.datetime.now().astimezone().isoformat(),name=str(data.get('name','Linux-System'))[:120],source_host=api.source_host(data),**getattr(g,'backup_component',{})))
+            api.save(folder/'manifest.json',dict(id=sid,format=FORMAT,created=datetime.datetime.now().astimezone().isoformat(),name=str(data.get('name','Linux-System'))[:120],chunking='content-defined-v1' if data.get('chunking')=='content-defined-v1' else 'fixed-v1',source_host=api.source_host(data),**getattr(g,'backup_component',{})))
             return jsonify(id=sid)
         sid=api.identifier(request.args.get('id'));folder=api.direct(root/('.upload-'+sid))
         m=json.loads(api.direct(folder/'manifest.json').read_text())

@@ -32,7 +32,7 @@ class Files(unittest.TestCase):
   with server.rootfd(self.row) as fd:
    sha=server.scan(fd)[0]['sha'];server.mutate(fd,'file',sha,io.BytesIO(b'new'),3)
    with self.assertRaises(FileExistsError):server.mutate(fd,'file',sha,io.BytesIO(b'bad'),3)
-   self.assertEqual(p.read_bytes(),b'new');self.assertEqual(list(self.root.glob('.hsm-history-*'))[0].read_bytes(),b'old')
+   self.assertEqual(p.read_bytes(),b'new');self.assertEqual(list(self.root.glob('.hsm-history/*/*'))[0].read_bytes(),b'old')
    sha=server.scan(fd)[0]['sha'];server.mutate(fd,'file',sha,io.BytesIO(),0,True);self.assertFalse(p.exists())
  def test_paths(self):
   for path in ['../x','/x','a//b','a\\b','a:b','.hsm-history/a','NUL.txt','x.']:

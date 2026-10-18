@@ -15,7 +15,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 namespace HeimserverClient {
-    public static class Release { public const string Version = "0.2.11"; }
+    public static class Release { public const string Version = "0.2.12"; }
 
     [DataContract]
     public class Config {

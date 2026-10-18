@@ -88,8 +88,24 @@ def sync(row,progress=lambda s:None):
     try:
         ROOT.mkdir(parents=True,exist_ok=True,mode=0o700)
         with (ROOT/'.sync-lock').open('a') as lock:
-            fcntl.flock(lock.fileno(),fcntl.LOCK_EX|fcntl.LOCK_NB)
-            return _sync(row,progress)
+            try:fcntl.flock(lock.fileno(),fcntl.LOCK_EX|fcntl.LOCK_NB)
+            except BlockingIOError:raise core.Error(tr('Synchronisierung läuft bereits.')) from None
+            last=[0.0]
+            def publish(detail,state='running',force=False):
+                now=time.monotonic()
+                if force or now-last[0]>=0.5:
+                    core.atomic(ROOT/'progress.json',json.dumps(dict(pid=os.getpid(),state=state,folder=row.get('name',''),detail=detail,updated=time.time())))
+                    last[0]=now
+            def report(detail):
+                publish(detail);progress(detail)
+            publish(tr('Serverbestand und Prüfsummen werden geprüft …'),force=True)
+            try:
+                result=_sync(row,report)
+                publish(result,'finished',True)
+                return result
+            except Exception as exc:
+                publish(str(exc),'failed',True)
+                raise
     finally:RUN_LOCK.release()
 
 class SyncProgress:

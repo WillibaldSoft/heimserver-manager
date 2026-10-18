@@ -1548,6 +1548,13 @@ def run_update_execute(
             _write_json(run_dir / "session.json", session)
             uc = _manager_update_check(manager)
             result["update_check"] = uc
+            # Publish the verified version check to the same cache used by app cards.
+            # A cache failure must not turn a successful installation into a failure.
+            try:
+                from .plugin import _store_update_check
+                _store_update_check(manager.app_id, dict(uc))
+            except Exception as cache_error:
+                result["status_cache_error"] = str(cache_error)
 
             result["ok"] = bool(verify.get("ok", True))
             result["message"] = execute_result.get("message") or "Update-Ausführung abgeschlossen."

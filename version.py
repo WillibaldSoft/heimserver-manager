@@ -1,2 +1,2 @@
 """Release including Debian revision."""
-VERSION = "0.13-3"
+VERSION = "0.13-8"

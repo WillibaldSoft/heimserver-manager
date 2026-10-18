@@ -69,14 +69,23 @@ class Writer:
             return h.hexdigest()
         finally:f.close()
 
-    def parents(self,path):
+    def parents(self,path,directory_mode=0o750):
         bits=components(path)
         for n in range(1,len(bits)):
             url=self.url('/'.join(bits[:n]))
-            try:self.ctx.mkdir(url,0o750)
+            try:self.ctx.mkdir(url,directory_mode)
             except OSError as e:
                 if e.errno!=errno.EEXIST:raise
             if not stat.S_ISDIR(self.ctx.stat(url)[0]):raise core.Error('Unsafe SMB parent')
+
+    def history_path(self,path):
+        # Keep the full original name (including 255-byte names). Timestamp and
+        # random ID belong to a directory, not to an overlong filename.
+        bits=components(path)
+        stamp=time.strftime('%Y%m%dT%H%M%SZ',time.gmtime())+'-'+uuid.uuid4().hex
+        history='/'.join(bits[:-1]+['.hsm-history',stamp,bits[-1]])
+        self.parents(history,directory_mode=0o777)
+        return history
 
     def copy(self,source,target):
         src=self.ctx.open(self.url(source),os.O_RDONLY)
@@ -108,7 +117,17 @@ class Writer:
             # Require write access on the file itself, not merely permission to
             # create a replacement in its parent. Do not truncate in this check.
             if not delete:self.ctx.open(self.url(path),os.O_WRONLY).close()
-            bits=components(path);history='/'.join(bits[:-1]+['.hsm-history-'+str(time.time_ns())+'-'+uuid.uuid4().hex])
+            history=self.history_path(path)
+            if delete:
+                # Renaming retains the original inode/Windows ACL and does not
+                # require impersonating its owner to create a backup descriptor.
+                if self.revision(path)!=expected:raise core.Error('Conflict while retaining SMB revision')
+                try:self.ctx.rename(self.url(path),self.url(history))
+                except OSError as exc:
+                    raise core.Error(tr('SMB-Löschung nicht erlaubt; Datei unverändert: ')+path) from exc
+                if self.revision(history)!=expected:
+                    raise core.Error(tr('SMB-Rückholkopie prüfen: ')+history)
+                return {'sha':None}
             self.copy(path,history)
             if self.revision(history)!=expected or self.revision(path)!=expected:raise core.Error('Conflict while retaining SMB revision')
         journal=Path.home()/'.config/server-manager-client/offline'/('smb-recovery-'+hashlib.sha256(self.url(path).encode()).hexdigest()+'.json')

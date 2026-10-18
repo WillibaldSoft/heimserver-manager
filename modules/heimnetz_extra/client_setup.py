@@ -39,6 +39,8 @@ def register(app,ctx,init_tables,server_mac):
   if g.auth_principal['role'] in ('admin','user'):
    body+=_ui_html("<form method='post' action='/clients/setup/profile'><input type='hidden' name='auth_csrf' value='")+ctx.esc(session['auth_csrf'])+_ui_html("'><button>Persönliches Einrichtungsprofil herunterladen</button></form>")
   else:body+=_ui_html('<p>Nur Lesen: keine neue Gerätekopplung erlaubt.</p>')
+  from modules.heimnetz_extra.client_download_links import card as download_addresses
+  body += download_addresses()
   return ctx.page(_ui_text('Client einrichten'),body+_ui_html('</div>'),'Clients')
  @app.post('/clients/setup/profile')
  def setup_profile():

@@ -1,7 +1,7 @@
 """Build a generic desktop client, deriving shell logic from the current installer."""
 import ast,shlex,shutil,subprocess,tempfile
 from pathlib import Path
-VERSION='0.4.36'
+VERSION='0.4.41'
 
 def legacy_parts(source):
     tree=ast.parse(source.read_text())

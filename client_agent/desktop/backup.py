@@ -66,6 +66,7 @@ def watch_upload(call,sid):
 def abort_upload(call,sid):
     result=call('abort',{},query='&id='+sid)
     if result.get('completed'):return tr('Abbruch kam nach dem Abschluss; fertige Sicherung bleibt erhalten.')
+    if result.get('blocks_retained'):return tr('Sicherung abgebrochen. Übertragene Blöcke bleiben für den nächsten inkrementellen Lauf erhalten.')
     return tr('Sicherung abgebrochen; unvollständige Übertragung entfernt. Fertige Stände bleiben erhalten.')
 
 def account_logout():

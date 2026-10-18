@@ -5772,7 +5772,7 @@
   "Zurück zu Backup-Runs": "Back to Backup Runs",
   "Zurück zu Client-Agenten": "Back to Client Agents",
   "Zurück zu ComfyUI": "Back to ComfyUI",
-  "Zurück zu Einstellungen": "Back to Settings",
+  "Zurück zu Einstellungen": "Back to settings",
   "Zurück zu Runs": "Back to Runs",
   "Zurück zu Snapshots": "Back to Snapshots",
   "Zurück zu Ziele & Dienste": "Back to Targets & Services",
@@ -6622,5 +6622,10 @@
   "PC-Systemsicherung und Systemwiederherstellung erlauben": "Allow PC system backup and system recovery",
   "Nur mit Rolle Benutzer und Eigene Clients & Sicherungen. Zugriff auf alle gemeinsamen PC-Systemstände, einschließlich sensibler Systemdateien und Dienst-Zugangsdaten. Persönliche Sicherungen anderer Benutzer und Server-Backups bleiben gesperrt.": "Requires the User role and Own clients & backups. Grants access to all shared PC system snapshots, including sensitive system files and service credentials. Other users’ personal backups and server backups remain restricted.",
   "Gemeinsamer Systemstand: Manager-Administrator oder Benutzer mit Systemsicherungsfreigabe anmelden.": "Shared system snapshot: sign in as a manager administrator or a user with system backup permission.",
-  "Ungültige Systemsicherungsfreigabe.": "Invalid system backup permission."
+  "Ungültige Systemsicherungsfreigabe.": "Invalid system backup permission.",
+  "App-Updateprüfung": "App update check",
+  "Versionsprüfung läuft; es werden keine Updates installiert.": "Version check in progress; no updates are being installed.",
+  "Updateprüfung durch einen Manager-Neustart unterbrochen. Erneut starten.": "Update check interrupted by a manager restart. Start it again.",
+  "Manager neu starten": "Restart manager",
+  "Startet den Heimserver Manager neu. Laufende Aufträge werden vorher geprüft. Vorgemerkte Einstellungen werden beim Start übernommen. Der Server selbst wird nicht neu gestartet.": "Restarts Home Server Manager after checking for running jobs. Pending settings are applied at startup. The server itself is not rebooted."
 }

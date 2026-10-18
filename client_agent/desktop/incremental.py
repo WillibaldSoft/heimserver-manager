@@ -3,10 +3,14 @@ try:
     from client_i18n import tr
 except ModuleNotFoundError:
     from client_agent.desktop.client_i18n import tr
-import hashlib,io,time
+import hashlib,io,time,re
+# Content anchors are searched in C; SHA-256 still verifies every stored block.
+ANCHOR=re.compile(b"\x13\x37[\x00-\x1f]")
+MIN_BLOCK=1024*1024
 import backup,core
 class Stream(io.RawIOBase):
-    def __init__(self,sid,progress,call=None,check=None,on_bytes=None,async_finish=False):
+    def __init__(self,sid,progress,call=None,check=None,on_bytes=None,async_finish=False,content_defined=False):
+        self.content_defined=content_defined
         self.async_finish=async_finish
         self.on_bytes=on_bytes or (lambda count:None)
         self.check=check or (lambda:None)
@@ -20,19 +24,26 @@ class Stream(io.RawIOBase):
         n=len(data);self.hash.update(data);view=memoryview(data)
         while view:
             count=min(backup.CHUNK-len(self.buffer),len(view));self.buffer.extend(view[:count]);view=view[count:]
-            if len(self.buffer)==backup.CHUNK:self.flush()
+            if self.content_defined:
+                while len(self.buffer)>=MIN_BLOCK:
+                    match=ANCHOR.search(self.buffer,MIN_BLOCK-3)
+                    if match:self.flush(match.end())
+                    elif len(self.buffer)==backup.CHUNK:self.flush()
+                    else:break
+            elif len(self.buffer)==backup.CHUNK:self.flush()
         return n
-    def flush(self):
+    def flush(self,count=None):
         if not self.buffer:return
         self.check()
-        data=bytes(self.buffer);key=hashlib.sha256(data).hexdigest()
+        count=len(self.buffer) if count is None else count
+        data=bytes(self.buffer[:count]);key=hashlib.sha256(data).hexdigest()
         found=self.call('block-has',query='&hash='+key+'&id='+self.sid)
         if found.get('present'):
             if found.get('bytes')!=len(data):raise core.Error(tr('Blockgröße stimmt nicht.'))
             self.reused+=len(data)
         else:
             self.call('block-put',data,'&id='+self.sid+'&hash='+key);self.sent+=len(data)
-        self.refs.append(dict(sha256=key,bytes=len(data)));self.offset+=len(data);self.buffer.clear()
+        self.refs.append(dict(sha256=key,bytes=len(data)));self.offset+=len(data);del self.buffer[:count]
         if len(self.refs)>262144:raise core.Error(tr('Maximale Anzahl Sicherungsblöcke erreicht.'))
         self.on_bytes(self.offset)
         self.progress(tr('Gelesen: ')+str(self.offset//1024**2)+tr(' MiB · neu übertragen: ')+str(self.sent//1024**2)+tr(' MiB · wiederverwendet: ')+str(self.reused//1024**2)+' MiB')

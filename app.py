@@ -138,7 +138,7 @@ NAV_GROUPS = [
     ("Daten", "/downloads", [ ("Downloads", "/downloads"), ("Backup & Recovery", "/backup/central"), ("Fotolabor", "/fotolabor"), ("Scanner API für Home Assistant", "/scanner")]),
     ("TV & Aufnahmen", "/tv", [("Überblick", "/tv"), ("Aufnahmen", "/tv/recordings"), ("Geplant", "/tv/upcoming"), ("Programm suchen", "/tv/epg"), ("Live-TV", "/tv/streams"), ("Aufwachen", "/tv/rtc"), ("Verbindung", "/tv/status")]),
     ("Alarme", "/alarme", []),
-    ("Einstellungen", "/settings", [("Allgemein", "/settings"), ("Sprachen", "/settings/languages"), ("Server & Modulpfade", "/settings/server-paths"), ("Zugang", "/settings/access"), ("Manager-Benutzer", "/settings/users"), ("HTTPS", "/settings/https"), ("Reparaturskripte", "/settings/repairs"), ("Manager aktualisieren", "/settings/manager-update"), ("Installationsauswahl", "/settings/installation"), ("Modulauswahl", "/settings/modules"), ("Moduldiagnose", "/modules")]),
+    ("Einstellungen", "/settings", [("Allgemein", "/settings"), ("Sprachen", "/settings/languages"), ("Server & Modulpfade", "/settings/server-paths"), ("Manager neu starten", "/settings/restart"), ("Zugang", "/settings/access"), ("Manager-Benutzer", "/settings/users"), ("HTTPS", "/settings/https"), ("Reparaturskripte", "/settings/repairs"), ("Manager aktualisieren", "/settings/manager-update"), ("Installationsauswahl", "/settings/installation"), ("Modulauswahl", "/settings/modules"), ("Moduldiagnose", "/modules")]),
 ]
 
 from modules.module_selection import config as module_choices
@@ -677,6 +677,7 @@ def settings():
 
     body += _ui_html("<form method='post'>")
 
+    body += _ui_html("<h3>Manager neu starten</h3><p><a class='btn' href='/settings/restart'>Manager neu starten</a></p>")
     body += _ui_html("<h3>Server & Modulpfade</h3><p>Datenordner, Backup-Ziele, Netzwerk und App-Pfade zentral verwalten.</p><p><a class='btn' href='/settings/server-paths'>Server & Modulpfade öffnen</a></p>")
 
     body += _ui_html("<h3>Restore-Sicherheit</h3>")

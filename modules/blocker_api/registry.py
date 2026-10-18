@@ -2,6 +2,7 @@
 import importlib
 
 BLOCKER_PROVIDERS = [
+    "modules.app_manager.plugin",
     "modules.app_manager.apt_jobs",
     "modules.backup.central",
     "modules.downloads.files",

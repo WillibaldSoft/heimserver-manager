@@ -67,6 +67,12 @@ def register(app,ctx):
         if units.stdout.strip():result.append('Geplantes App-Backup')
         return result
 
+    @app.get('/settings/restart')
+    def restart_page():
+        body=_ui_html("<div class='card'><h2>Manager neu starten</h2><p>Startet den Heimserver Manager neu. Laufende Aufträge werden vorher geprüft. Vorgemerkte Einstellungen werden beim Start übernommen. Der Server selbst wird nicht neu gestartet.</p><form method='post' action='/settings/server-paths'>")
+        body+=token()+_ui_html("<input type='hidden' name='revision' value='")+e(cfg.revision())+_ui_html("'><button class='btn' name='action' value='restart'>Manager neu starten</button></form><p><a class='btn' href='/settings'>Zurück zu Einstellungen</a></p></div>")
+        return page(body)
+
     @app.route('/settings/server-paths',methods=['GET','POST'])
     def server_paths():
         message=''; values=cfg.load(True)
