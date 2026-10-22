@@ -1,6 +1,6 @@
 # CHANGELOG
 
-Current version: **0.13-8** (Beta). Full changes are available in the
+Current version: **0.13-9** (Beta). Full changes are available in the
 [English version history](Home_Server_Manager_Version_History.txt) and the
 [German version history](../Heimserver_Manager_Versionsaenderungen.txt).
 
@@ -86,3 +86,11 @@ Current version: **0.13-8** (Beta). Full changes are available in the
 - Linux client 0.4.41: clickable software download link at the bottom left, derived from the configured manager address. Without a valid address, the example link remains disabled.
 - Version number shown only in the window title; duplicate version line removed. German and English labels.
 - Includes the history layout and all documented fixes from interim releases 0.13-4 through 0.13-7. Windows client remains 0.2.12 (experimental).
+
+0.13-9 – October 22, 2026 – Beta
+- Applications / System packages: opt-in security update automation every two hours. Official Debian/Ubuntu security repositories; Mint uses its Ubuntu base. New installations remain disabled initially.
+- Persistent APT jobs and sleep blockers protect running updates. Backups and installations defer the run; the server is not woken. Package holds and blacklists remain effective.
+- needrestart restarts affected services, then checks again. Outstanding security updates, services and server reboot requirements are shown. No automatic server reboot and no full CVE or critical-only scan.
+- ntfy reports installed updates, failures and pending restarts using the existing alarm configuration. Unchanged alerts are suppressed; only counts are sent without detail consent.
+- Completion checks are explicitly recorded in status and logs. Read-only diagnostics also recognize older completed runs from their stored verification results instead of incorrectly reporting False.
+- Linux client 0.4.41 and Windows client 0.2.12 remain unchanged. German and English documentation updated.

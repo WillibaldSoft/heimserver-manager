@@ -6,8 +6,10 @@ E=lambda s:html.escape(str(s),quote=True)
 def token():return "<input type='hidden' name='auth_csrf' value='"+E(session.get('auth_csrf',''))+"'>"
 def form(action,label):return _ui_html("<form method='post' action='/apps/apt/run' style='display:inline'>")+token()+_ui_html("<input type='hidden' name='action' value='")+action+_ui_html("'><button class='btn'>")+_ui_text(label)+_ui_html('</button></form>')
 def card():
- return _ui_html("<div class='card'><h3>Systempakete · APT</h3><p>Debian-/Ubuntu-Pakete und installierte Paketquellen verwalten.</p>")+form('update','apt update')+form('list','Updates anzeigen')+_ui_html("<a class='btn' href='/apps/apt'>apt upgrade …</a> <a class='btn' href='/apps/apt#full-upgrade'>apt full-upgrade …</a><p><a href='/apps/apt'>Status und Protokoll</a></p></div>")
+ return _ui_html("<div class='card'><h3>Systempakete · APT</h3><p>Debian-/Ubuntu-Pakete und installierte Paketquellen verwalten.</p>")+form('update','apt update')+form('list','Updates anzeigen')+_ui_html("<a class='btn' href='/apps/apt'>apt upgrade …</a> <a class='btn' href='/apps/apt#full-upgrade'>apt full-upgrade …</a><p><a href='/apps/apt'>Status und Protokoll</a></p><p><a class='btn' href='/apps/apt/security'>Automatische Sicherheitsupdates</a></p></div>")
 def register(app,ctx):
+ from .security_ui import register as register_security
+ register_security(app,ctx)
  @app.route('/apps/docker/installer',methods=['GET','POST'])
  def docker_installer():
   from . import docker_setup as d
@@ -54,11 +56,13 @@ def register(app,ctx):
    body+=_ui_html("<h4>Vorschau der geplanten Änderungen</h4><pre style='white-space:pre-wrap;max-height:28rem;overflow:auto'>")+E(jobs.log_tail(job['id']))+_ui_html("</pre><p>Die Simulation ist eine Momentaufnahme. Bei zwischenzeitlichen Paketänderungen erneut simulieren.</p><form method='post' action='/apps/apt/run'>")+token()+_ui_html("<input type='hidden' name='action' value='full-upgrade'><input type='hidden' name='preview' value='")+E(job['id'])+_ui_html("'><label><input type='checkbox' name='confirm' value='yes' required> Vorschau geprüft; Paketentfernungen und Full-Upgrade ausführen</label> <button class='btn'>Full-Upgrade starten</button></form>")
   body+=_ui_html('</div>')
   if job:body+=_ui_html("<div class='card'><p>Letzter Auftrag: ")+E(_ui_text(jobs.LABELS[job['action']]))+' · '+E(_ui_text(job['state']))+_ui_html("</p><a class='btn' href='/apps/apt/jobs/")+job['id']+_ui_html("'>Status und Protokoll öffnen</a></div>")
+  body+=_ui_html("<div class='card'><a class='btn' href='/apps/apt/security'>Automatische Sicherheitsupdates · alle zwei Stunden</a></div>")
   return ctx.page(_ui_text('APT · Systempakete'),body,'Anwendungen')
  @app.route('/apps/apt/run',methods=['POST'])
  def run():
   try:
    action=request.form.get('action','')
+   if action.startswith('security-'):raise ValueError('Use the security maintenance settings.')
    if action.startswith('nvidia-'):raise ValueError('NVIDIA-Aktionen über die Treibervorschau bestätigen.')
    if action.startswith('dddvb-'):raise ValueError('Treiberaktionen über die Digital-Devices-Vorschau bestätigen.')
    if action in ('docker-install','docker-remove','docker-start'):raise ValueError('Docker-Aktionen über Apps verwalten bestätigen.')

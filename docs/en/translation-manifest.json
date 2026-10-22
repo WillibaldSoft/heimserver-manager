@@ -1,8 +1,8 @@
 {
   "CHANGELOG.md": {
     "english": "docs/en/CHANGELOG.md",
-    "english_sha256": "3110dc066a341761063ffd177127f6f6d1d873195b5569bd5fca7b91e8cad7a7",
-    "source_sha256": "e62d2a53fa4bcb3403c553f12382746c27b79b48a25338d94f5c911fc9977ae0"
+    "english_sha256": "35dfb428a327353aea807c2ff071dc490329bcf7864dd2805fd9c71347c0520f",
+    "source_sha256": "31ec463e00cb83788de3a02cc173fd29c71e89dcdf03b14366504cddf7751c22"
   },
   "LICENSE_NOTICE.md": {
     "english": "docs/en/LICENSE_NOTICE.md",
@@ -176,13 +176,13 @@
   },
   "docs/Heimserver_Manager_Funktionsuebersicht.txt": {
     "english": "docs/en/Home_Server_Manager_Features.txt",
-    "english_sha256": "c110901e482e832272dc46b05e2fb64ba99660c383ef807b638161e196f5ab37",
-    "source_sha256": "70f090a3fc1a8e966efa47ed046801e72539ee964a9d5ef252dfa9d4f25df8fd"
+    "english_sha256": "70fd99f78ec7dd52a89671fbfa3b293903f8c798df3e555cac805b8536ab6515",
+    "source_sha256": "4e6a647b3787afa496fd4a83c138cf75de72b96dce663225eae1f35dc05624a4"
   },
   "docs/Heimserver_Manager_Versionsaenderungen.txt": {
     "english": "docs/en/Home_Server_Manager_Version_History.txt",
-    "english_sha256": "23f76c0533cc0d98edb2c5e9d471d4a79927604a8d0d977740f4f69f1cdb195f",
-    "source_sha256": "f7acdda3c6ae2fb576b56a518c4be17ebe07293d3bb9545ce278bad0d9fd63b9"
+    "english_sha256": "0e665f450e3347b3cbe75961d49ab2def85652c9fcbbec4c49f0d26a8da442fa",
+    "source_sha256": "54611a530c470bab068c5667abd3174d310d339ceead7b41207b777bbfa721fc"
   },
   "docs/Installer.md": {
     "english": "docs/en/Installer.md",
@@ -263,6 +263,11 @@
     "english": "docs/en/SCREENSHOTS.md",
     "english_sha256": "0c56e4649ea22f559e9b55bde06f21af7fe96148299abdbf29785d1238e9550d",
     "source_sha256": "e2f63227f6ccba3d09842c4e355c061198d027884624d4eaab5af62762b66a50"
+  },
+  "docs/SECURITY_UPDATES.md": {
+    "english": "docs/en/SECURITY_UPDATES.md",
+    "english_sha256": "f269da924cceb631e7ab1c70a3e87b5775a32c5d6b4f7188dd370c5cede31ea5",
+    "source_sha256": "61cf88d885ae963166209028d6d885260b167778e80454fd87f0f6739262a257"
   },
   "docs/SERVER_PATHS.md": {
     "english": "docs/en/SERVER_PATHS.md",

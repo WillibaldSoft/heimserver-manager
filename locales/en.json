@@ -6627,5 +6627,9 @@
   "Versionsprüfung läuft; es werden keine Updates installiert.": "Version check in progress; no updates are being installed.",
   "Updateprüfung durch einen Manager-Neustart unterbrochen. Erneut starten.": "Update check interrupted by a manager restart. Start it again.",
   "Manager neu starten": "Restart manager",
-  "Startet den Heimserver Manager neu. Laufende Aufträge werden vorher geprüft. Vorgemerkte Einstellungen werden beim Start übernommen. Der Server selbst wird nicht neu gestartet.": "Restarts Home Server Manager after checking for running jobs. Pending settings are applied at startup. The server itself is not rebooted."
+  "Startet den Heimserver Manager neu. Laufende Aufträge werden vorher geprüft. Vorgemerkte Einstellungen werden beim Start übernommen. Der Server selbst wird nicht neu gestartet.": "Restarts Home Server Manager after checking for running jobs. Pending settings are applied at startup. The server itself is not rebooted.",
+  "Automatische Sicherheitsupdates": "Automatic security updates",
+  "Automatische Sicherheitsupdates · alle zwei Stunden": "Automatic security updates · every two hours",
+  "Sicherheitsupdates · Voraussetzungen": "Security updates · prerequisites",
+  "Sicherheitsupdates · Automatik": "Security updates · automation"
 }

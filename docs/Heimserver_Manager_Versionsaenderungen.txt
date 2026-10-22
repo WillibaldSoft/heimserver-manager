@@ -2,6 +2,14 @@ HEIMSERVER MANAGER – ÄNDERUNGEN PRO VERSION
 Diese Datei wird bei jeder neuen DEB-Version fortgeführt.
 Rückblick ab 0.12-18 anhand der erstellten Pakete und dokumentierten Änderungen.
 
+0.13-9 – 22. Oktober 2026 – Beta
+- Anwendungen / Systempakete: optionale Sicherheitsupdate-Automatik alle zwei Stunden. Offizielle Debian-/Ubuntu-Sicherheitsquellen; Mint verwendet seine Ubuntu-Basis. Neue Installationen bleiben zunächst inaktiv.
+- Persistente APT-Aufträge und Schlafblocker schützen laufende Updates. Sicherungen und Installationen verschieben den Lauf; kein Aufwecken des Servers. Paket-Holds und Sperrlisten gelten weiter.
+- needrestart startet betroffene Dienste und prüft danach erneut. Offene Sicherheitsupdates, Dienste und erforderliche Server-Neustarts werden angezeigt. Kein automatischer Server-Neustart und keine vollständige CVE- oder Nur-kritisch-Prüfung.
+- ntfy meldet installierte Updates, Fehler und offene Neustarts über die vorhandene Alarm-Konfiguration. Unveränderte Warnungen werden unterdrückt; ohne Detailfreigabe werden nur Anzahlen übertragen.
+- Abschlussprüfung ausdrücklich im Status und Protokoll erfasst. Die reine Lese-Diagnose erkennt auch bereits abgeschlossene ältere Läufe anhand gespeicherter Prüfergebnisse, statt fälschlich False anzuzeigen.
+- Linux-Client 0.4.41 und Windows-Client 0.2.12 unverändert. Deutsche und englische Dokumentation ergänzt.
+
 0.13-8 – 18. Oktober 2026 – Beta
 - Linux-Client 0.4.41: anklickbarer Software-Download-Link unten links. Die Adresse folgt der eingestellten Manager-Adresse; ohne gültige Adresse bleibt der Beispiel-Link deaktiviert.
 - Versionsnummer nur noch im Fenstertitel; doppelte Versionszeile entfernt. Deutsche und englische Beschriftung.

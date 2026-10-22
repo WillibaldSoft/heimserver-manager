@@ -5,6 +5,8 @@ if __package__ in (None,''):sys.path.insert(0,str(Path(__file__).resolve().paren
 import server_settings as cfg
 ROOT=cfg.STATE_DIR/'apt-jobs'
 COMMANDS={
+ 'security-setup':['Security update dependencies'],
+ 'security-update':['Security updates and service restart verification'],
  'module-dependencies':['Modulabhängigkeiten installieren'],
  'nvidia-detect':['NVIDIA-Hardwareprüfung installieren'],
  'nvidia-install':['NVIDIA-Treiber installieren/aktualisieren'],
@@ -21,7 +23,7 @@ COMMANDS={
  'list':['/usr/bin/apt','list','--upgradable'],
  'upgrade':['/usr/bin/apt-get','-o','DPkg::Lock::Timeout=60','-o','Dpkg::Options::=--force-confold','--yes','--with-new-pkgs','upgrade'],
 }
-LABELS={'module-dependencies':'Manager-Modulabhängigkeiten','nvidia-detect':'NVIDIA · Hardwareprüfung','nvidia-install':'NVIDIA · Installation/Update','nvidia-repair':'NVIDIA · Reparatur','dddvb-install':'Digital Devices · Installation/Update','dddvb-install-native':'Digital Devices · Installation/Update (Kernel-dvb-core)','dddvb-repair':'Digital Devices · DKMS-Reparatur','docker-start':'Docker-Dienst starten','docker-install':'Docker Engine & Compose installieren','docker-remove':'Docker Engine & Compose deinstallieren','full-preview':'Full-Upgrade simulieren','full-upgrade':'Systempakete vollständig aktualisieren','update':'Paketlisten aktualisieren','list':'Verfügbare Updates anzeigen','upgrade':'Systempakete aktualisieren'}
+LABELS={'security-setup':'Sicherheitsupdates · Voraussetzungen','security-update':'Sicherheitsupdates · Automatik','module-dependencies':'Manager-Modulabhängigkeiten','nvidia-detect':'NVIDIA · Hardwareprüfung','nvidia-install':'NVIDIA · Installation/Update','nvidia-repair':'NVIDIA · Reparatur','dddvb-install':'Digital Devices · Installation/Update','dddvb-install-native':'Digital Devices · Installation/Update (Kernel-dvb-core)','dddvb-repair':'Digital Devices · DKMS-Reparatur','docker-start':'Docker-Dienst starten','docker-install':'Docker Engine & Compose installieren','docker-remove':'Docker Engine & Compose deinstallieren','full-preview':'Full-Upgrade simulieren','full-upgrade':'Systempakete vollständig aktualisieren','update':'Paketlisten aktualisieren','list':'Verfügbare Updates anzeigen','upgrade':'Systempakete aktualisieren'}
 TERMINAL={'completed','failed','interrupted'}
 def folder(key):
  if not re.fullmatch('[a-f0-9]{32}',key):raise ValueError('Ungültiger Auftrag.')
@@ -55,7 +57,7 @@ def start(action,parameters=None):
   value=dict(parameters=parameters,id=key,action=action,state='queued',created=time.time(),message='Auftrag wartet.')
   cfg.atomic(path/'status.json',value);cfg.atomic(ROOT/'latest.json',{'id':key})
   args=['systemd-run','--quiet','--collect','--unit=server-manager-apt-'+key,'--property=Type=exec','--property=UMask=0077']
-  args+=['--setenv='+k+'='+os.environ[k] for k in ('SERVER_MANAGER_CONFIG','SERVER_MANAGER_STATE') if k in os.environ]
+  args+=['--setenv='+k+'='+os.environ[k] for k in ('SERVER_MANAGER_CONFIG','SERVER_MANAGER_STATE','SERVER_MANAGER_DB') if k in os.environ]
   args+=['/usr/bin/python3',str(Path(__file__).resolve()),'--worker',key]
   try:subprocess.run(args,check=True,capture_output=True,text=True,timeout=15)
   except (OSError,subprocess.SubprocessError):
@@ -84,7 +86,14 @@ def worker(key):
   with open(path/'run.log','w',buffering=1) as log:
    os.chmod(log.name,0o600);log.write('Befehl: '+' '.join(COMMANDS[action])+'\n')
    env=dict(os.environ,DEBIAN_FRONTEND='noninteractive',APT_LISTCHANGES_FRONTEND='none',TERM='dumb')
-   if action=='module-dependencies':
+   if action=='security-update':
+    from modules.app_manager.security_updates import execute
+    security=execute(log,key);result=subprocess.CompletedProcess([],0)
+   elif action=='security-setup':
+    env['NEEDRESTART_MODE']='l'
+    subprocess.run(COMMANDS['update'],stdin=subprocess.DEVNULL,stdout=log,stderr=subprocess.STDOUT,env=env,check=True)
+    result=subprocess.run(['/usr/bin/apt-get','-o','DPkg::Lock::Timeout=60','-o','Dpkg::Options::=--force-confold','--yes','--no-install-recommends','install','unattended-upgrades','needrestart'],stdin=subprocess.DEVNULL,stdout=log,stderr=subprocess.STDOUT,env=env)
+   elif action=='module-dependencies':
     from modules.first_start.config import packages
     requested=packages((job.get('parameters') or {}).get('modules'))
     if not requested:raise ValueError('Keine Modulabhängigkeiten gewählt.')
@@ -102,7 +111,7 @@ def worker(key):
    else:
     result=subprocess.run(COMMANDS[action],stdin=subprocess.DEVNULL,stdout=log,stderr=subprocess.STDOUT,env=env)
   state='completed' if result.returncode==0 else 'failed'
-  cfg.atomic(path/'status.json',dict(job,state=state,returncode=result.returncode,finished=time.time(),message='Abgeschlossen.' if state=='completed' else 'APT meldet einen Fehler; Protokoll prüfen.',reboot_required=Path('/var/run/reboot-required').exists() or action.startswith('dddvb-') or action in ('nvidia-install','nvidia-repair')))
+  cfg.atomic(path/'status.json',dict(job,state=state,returncode=result.returncode,finished=time.time(),message='Abgeschlossen.' if state=='completed' else 'APT meldet einen Fehler; Protokoll prüfen.',security=security if action=='security-update' else None,reboot_required=(action=='security-update' and security.get('reboot_required',False)) or Path('/var/run/reboot-required').exists() or action.startswith('dddvb-') or action in ('nvidia-install','nvidia-repair')))
   return result.returncode
  except Exception as exc:
   cfg.atomic(path/'status.json',dict(job,state='failed',finished=time.time(),message=str(exc)));return 1
